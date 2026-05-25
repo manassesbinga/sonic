@@ -281,6 +281,13 @@ make docker-run  # Run via Docker Compose
 - Dynamic TLS MITM built-in
 - Hot-reload without restart
 
+adicionais 
+
+
+![Sonic Comparison](diagrama,png)
+
+![Sonic Comparison](fluxo.png)
+
 ## License
 
 MIT
