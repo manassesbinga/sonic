@@ -7,11 +7,16 @@ import (
 	"time"
 )
 
+// MITMEngine handles TLS Man-in-the-Middle operations.
+// It terminates TLS from the client (using dynamic certificates) and
+// re-encrypts to the real server with strict certificate verification.
 type MITMEngine struct {
 	ca    *CA
 	cache *CertCache
 }
 
+// NewMITMEngine creates a new MITM engine, loading or creating the Root CA.
+// The CA directory must contain or will receive ca.pem and ca-key.pem.
 func NewMITMEngine(caDir string) (*MITMEngine, error) {
 	ca, err := LoadOrCreateCA(caDir)
 	if err != nil {
@@ -29,9 +34,13 @@ func NewMITMEngine(caDir string) (*MITMEngine, error) {
 	}, nil
 }
 
-// InterceptTermTLS realiza a terminacao TLS MITM concorrente com o cliente.
+// InterceptTermTLS performs TLS termination with the client.
+// It generates a dynamic certificate for the SNI domain and completes
+// the TLS handshake as the server. Returns the decrypted connection.
+//
+// The clientConn should be a raw TCP connection from the client.
+// domain is the SNI hostname extracted from the ClientHello.
 func (m *MITMEngine) InterceptTermTLS(clientConn net.Conn, domain string) (*tls.Conn, error) {
-	// Obtem o certificado correspondente para o dominio da conexao
 	tlsCert, err := m.cache.GetCertificate(domain)
 	if err != nil {
 		return nil, fmt.Errorf("falha ao obter certificado dinamico: %w", err)
@@ -42,19 +51,21 @@ func (m *MITMEngine) InterceptTermTLS(clientConn net.Conn, domain string) (*tls.
 		MinVersion:   tls.VersionTLS12,
 	}
 
-	// Termina o TLS do cliente e retorna a conexao limpa
 	tlsConn := tls.Server(clientConn, tlsConfig)
 	return tlsConn, nil
 }
 
-// ConnectRealServer estabelece a conexao TLS encriptada (re-encriptacao) com o servidor de destino real.
+// ConnectRealServer establishes a re-encrypted TLS connection to the real
+// upstream server. Uses strict certificate verification (InsecureSkipVerify: false).
+//
+// addr is the server address (e.g. "example.com:443").
+// domain is the SNI hostname for TLS verification.
 func (m *MITMEngine) ConnectRealServer(addr string, domain string) (*tls.Conn, error) {
 	tlsConfig := &tls.Config{
 		ServerName:         domain,
-		InsecureSkipVerify: false, // Mantido estrito para seguranca de producao
+		InsecureSkipVerify: false,
 	}
 
-	// Estabelece conexao TCP L4
 	dialer := &net.Dialer{
 		Timeout: 5 * time.Second,
 	}
@@ -63,7 +74,6 @@ func (m *MITMEngine) ConnectRealServer(addr string, domain string) (*tls.Conn, e
 		return nil, fmt.Errorf("falha ao conectar ao servidor de destino %s: %w", addr, err)
 	}
 
-	// Conecta o TLS L7 re-encriptando
 	tlsConn := tls.Client(conn, tlsConfig)
 	return tlsConn, nil
 }

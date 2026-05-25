@@ -4,14 +4,24 @@ import (
 	"errors"
 )
 
-// ExtractSNI extrai o Server Name Indication (SNI) de um payload cru de TLS Client Hello.
-// Nota: Projetado com verificacoes rigorosas de limites de memoria para evitar panics.
+// ExtractSNI parses a raw TLS ClientHello byte payload and returns
+// the Server Name Indication (SNI) hostname.
+//
+// It performs strict bounds checking at every step to prevent
+// buffer overflow or panic on malformed input.
+//
+// Returns an error if:
+//   - The data is not a TLS Handshake record
+//   - The record is not a ClientHello
+//   - Any length field exceeds available data
+//   - No SNI extension is found
+//
+// Reference: RFC 5246 (TLS 1.2) §7.4.1.2, RFC 6066 §3
 func ExtractSNI(data []byte) (string, error) {
 	if len(data) < 5 {
 		return "", errors.New("dados insuficientes para TLS Record")
 	}
 
-	// 1. Verifica se e um Handshake (0x16)
 	if data[0] != 0x16 {
 		return "", errors.New("nao e um record TLS Handshake")
 	}
@@ -23,22 +33,18 @@ func ExtractSNI(data []byte) (string, error) {
 
 	pos := 5
 
-	// 2. Verifica se e Client Hello (0x01)
 	if data[pos] != 0x01 {
 		return "", errors.New("nao e um TLS Client Hello")
 	}
 
-	// Pula Handshake Header (Type: 1 byte, Length: 3 bytes)
 	pos += 4
 
-	// Pula Protocol Version (2 bytes) e Random (32 bytes)
 	pos += 2 + 32
 
 	if pos >= len(data) {
 		return "", errors.New("fim inesperado de dados apos Random")
 	}
 
-	// Session ID (1 byte length + data)
 	sessionIDLen := int(data[pos])
 	pos += 1 + sessionIDLen
 
@@ -46,7 +52,6 @@ func ExtractSNI(data []byte) (string, error) {
 		return "", errors.New("fim inesperado de dados antes de Cipher Suites")
 	}
 
-	// Cipher Suites (2 bytes length + data)
 	cipherSuitesLen := int(data[pos])<<8 | int(data[pos+1])
 	pos += 2 + cipherSuitesLen
 
@@ -54,7 +59,6 @@ func ExtractSNI(data []byte) (string, error) {
 		return "", errors.New("fim inesperado de dados antes de Compression Methods")
 	}
 
-	// Compression Methods (1 byte length + data)
 	compressionLen := int(data[pos])
 	pos += 1 + compressionLen
 
@@ -62,7 +66,6 @@ func ExtractSNI(data []byte) (string, error) {
 		return "", errors.New("sem extensoes TLS")
 	}
 
-	// Extensions (2 bytes total length + data)
 	extensionsLen := int(data[pos])<<8 | int(data[pos+1])
 	pos += 2
 
@@ -71,7 +74,6 @@ func ExtractSNI(data []byte) (string, error) {
 		extensionsEnd = len(data)
 	}
 
-	// Varre as extensoes ate encontrar o SNI (tipo 0x0000)
 	for pos+4 <= extensionsEnd {
 		extType := int(data[pos])<<8 | int(data[pos+1])
 		extLen := int(data[pos+2])<<8 | int(data[pos+3])
@@ -81,13 +83,11 @@ func ExtractSNI(data []byte) (string, error) {
 			return "", errors.New("tamanho de extensao invalido")
 		}
 
-		// Encontrou a extensao SNI (0x0000)
 		if extType == 0 {
 			sniPos := pos
 			if sniPos+2 > pos+extLen {
 				return "", errors.New("extensao SNI malformada")
 			}
-			// Server Name List Length (2 bytes)
 			listLen := int(data[sniPos])<<8 | int(data[sniPos+1])
 			sniPos += 2
 
@@ -104,7 +104,6 @@ func ExtractSNI(data []byte) (string, error) {
 					return "", errors.New("tamanho de hostname SNI invalido")
 				}
 
-				// Name Type 0 indica HostName
 				if nameType == 0 {
 					return string(data[sniPos : sniPos+nameLen]), nil
 				}

@@ -1,3 +1,13 @@
+// Package mitm provides TLS Man-in-the-Middle capabilities for Sonic.
+//
+// It generates a local Root Certificate Authority and dynamically creates
+// TLS certificates for intercepted domains on-the-fly.
+//
+// Usage:
+//
+//	ca, err := mitm.LoadOrCreateCA("./certs")
+//	cache, err := mitm.NewCertCache(ca)
+//	tlsCert, err := cache.GetCertificate("example.com")
 package mitm
 
 import (
@@ -13,33 +23,37 @@ import (
 	"time"
 )
 
+// CA represents a local Root Certificate Authority used for signing
+// dynamic TLS certificates for MITM interception.
 type CA struct {
 	Cert    *x509.Certificate
 	PrivKey *rsa.PrivateKey
 }
 
-// LoadOrCreateCA carrega a CA existente no disco ou cria uma nova CA Raiz auto-assinada.
+// LoadOrCreateCA loads an existing CA from disk, or generates a new
+// self-signed Root CA if none exists. Certificates are stored as
+// ca.pem and ca-key.pem in the specified directory.
+//
+// The private key file is created with 0600 permissions.
 func LoadOrCreateCA(caDir string) (*CA, error) {
 	certPath := filepath.Join(caDir, "ca.pem")
 	keyPath := filepath.Join(caDir, "ca-key.pem")
 
-	// Garante que o diretorio caDir existe
 	if err := os.MkdirAll(caDir, 0755); err != nil {
 		return nil, fmt.Errorf("erro ao criar diretorio da CA: %w", err)
 	}
 
-	// Tenta carregar se ambos os ficheiros existirem
 	if _, errCert := os.Stat(certPath); errCert == nil {
 		if _, errKey := os.Stat(keyPath); errKey == nil {
 			return loadCA(certPath, keyPath)
 		}
 	}
 
-	// Caso contrario, gera uma nova CA Raiz
 	return generateAndSaveCA(caDir, certPath, keyPath)
 }
 
 func loadCA(certPath, keyPath string) (*CA, error) {
+	// ... loading logic
 	certBytes, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao ler certificado CA: %w", err)
@@ -109,8 +123,8 @@ func generateAndSaveCA(caDir, certPath, keyPath string) (*CA, error) {
 			Locality:     []string{"LocalNode"},
 			CommonName:   "ChannelWorkers Root CA",
 		},
-		NotBefore:             time.Now().Add(-24 * time.Hour), // Valido desde ontem
-		NotAfter:              time.Now().AddDate(10, 0, 0),    // Valido por 10 anos
+		NotBefore:             time.Now().Add(-24 * time.Hour),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageDigitalSignature,
 		IsCA:                  true,
 		BasicConstraintsValid: true,
@@ -121,7 +135,6 @@ func generateAndSaveCA(caDir, certPath, keyPath string) (*CA, error) {
 		return nil, fmt.Errorf("erro ao assinar certificado CA: %w", err)
 	}
 
-	// Codifica e grava o certificado em PEM
 	certOut, err := os.Create(certPath)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar ficheiro ca.pem: %w", err)
@@ -132,7 +145,6 @@ func generateAndSaveCA(caDir, certPath, keyPath string) (*CA, error) {
 		return nil, fmt.Errorf("erro ao codificar ca.pem: %w", err)
 	}
 
-	// Codifica e grava a chave privada em PEM (PKCS#1)
 	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar ficheiro ca-key.pem: %w", err)

@@ -1,0 +1,21 @@
+[Unit]
+Description=Sonic Edge JavaScript Engine
+Documentation=https://github.com/anomalyco/sonic
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/etc/sonic
+ExecStart=/usr/local/bin/sonic start
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+# Environment variables (override channelworkers.yaml)
+Environment=SONIC_LOG_LEVEL=info
+Environment=SONIC_LISTEN_PORT=8443
+
+[Install]
+WantedBy=multi-user.target

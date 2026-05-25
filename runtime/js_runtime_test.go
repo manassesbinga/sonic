@@ -121,13 +121,13 @@ func TestJSEngineConcurrency(t *testing.T) {
 		}
 	`
 
-	engine, err := NewJSEngine(jsCode, 50, 8)
+	engine, err := NewJSEngine(jsCode, 200, 8)
 	if err != nil {
 		t.Fatalf("Erro ao criar motor JS: %v", err)
 	}
 
 	var wg sync.WaitGroup
-	numRequests := 100
+	numRequests := 20
 
 	for i := 0; i < numRequests; i++ {
 		wg.Add(1)

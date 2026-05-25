@@ -1,7 +1,19 @@
+// Package runtime provides a JavaScript execution engine compatible with
+// the Cloudflare Workers API.
+//
+// It uses goja (Go JavaScript VM) with a pre-compiled script pool for
+// concurrent request handling. Supports onTraffic and onResponse hooks,
+// CPU watchdog timeouts, and Web Standard APIs (Request, Response, Headers, fetch).
+//
+// Usage:
+//
+//	engine, err := runtime.NewJSEngine(jsCode, 50, 64)
+//	req := &runtime.Request{Method: "GET", URL: "https://example.com/"}
+//	result, err := engine.RunOnTraffic(req)
 package runtime
 
-// Request representa a requisicao HTTP interceptada exposta para a VM JavaScript.
-// Nota: Os campos sao exportados para permitir leitura e escrita direta a partir do JS.
+// Request represents an intercepted HTTP request exposed to the JavaScript VM.
+// Fields are directly accessible from JS: req.method, req.url, req.headers, req.body.
 type Request struct {
 	Method  string            `json:"method"`
 	URL     string            `json:"url"`
@@ -10,16 +22,17 @@ type Request struct {
 	Body    string            `json:"body"`
 }
 
-// Response representa a resposta HTTP interceptada exposta para a VM JavaScript.
-// Nota: Os campos sao exportados para permitir leitura e escrita direta a partir do JS.
+// Response represents an intercepted HTTP response exposed to the JavaScript VM.
+// Fields are directly accessible from JS: resp.status, resp.headers, resp.body.
 type Response struct {
 	Status  int               `json:"status"`
 	Headers map[string]string `json:"headers"`
 	Body    string            `json:"body"`
 }
 
-// TrafficResult representa o resultado do processamento da funcao onTraffic.
-// Pode representar ou um Request modificado ou um Response de interceptacao direta (WAF).
+// TrafficResult holds the result of onTraffic execution.
+// It can represent either a modified Request (IsResponse=false) or
+// a direct Response for WAF-style blocking (IsResponse=true).
 type TrafficResult struct {
 	IsResponse bool              `json:"_isResponse"`
 	Method     string            `json:"method"`
@@ -29,4 +42,3 @@ type TrafficResult struct {
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
 }
-

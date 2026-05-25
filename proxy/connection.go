@@ -1,3 +1,14 @@
+// Package proxy implements Sonic's transparent TLS proxy with MITM interception.
+//
+// It extracts SNI from TLS ClientHello, performs MITM termination,
+// executes edge JavaScript workers, and forwards traffic to real servers.
+//
+// Usage:
+//
+//	proxy := proxy.NewTransparentProxy(cfg, mitmEngine, jsEngine)
+//	proxy.Start()
+//	// ... wait for signal ...
+//	proxy.Stop()
 package proxy
 
 import (
@@ -6,14 +17,15 @@ import (
 	"net"
 )
 
-// BufferedConn envolve uma conexao net.Conn para permitir espiar bytes iniciais
-// e garantir que as leituras subsequentes leiam esses bytes do buffer primeiro.
+// BufferedConn wraps a net.Conn with a buffered reader, allowing
+// byte-level inspection (Peek) without consuming data from the stream.
+// Used for TLS ClientHello SNI extraction.
 type BufferedConn struct {
 	net.Conn
 	reader io.Reader
 }
 
-// NewBufferedConn cria um wrapper sobre uma conexao TCP para permitir o Peek.
+// NewBufferedConn creates a buffered wrapper around a TCP connection.
 func NewBufferedConn(c net.Conn) *BufferedConn {
 	bufReader := bufio.NewReader(c)
 	return &BufferedConn{
@@ -22,7 +34,8 @@ func NewBufferedConn(c net.Conn) *BufferedConn {
 	}
 }
 
-// Peek permite espreitar N bytes sem consumi-los do fluxo do socket.
+// Peek returns the first n bytes without consuming them.
+// Returns an error if fewer than n bytes are available.
 func (bc *BufferedConn) Peek(n int) ([]byte, error) {
 	if bufReader, ok := bc.reader.(*bufio.Reader); ok {
 		return bufReader.Peek(n)
@@ -30,7 +43,7 @@ func (bc *BufferedConn) Peek(n int) ([]byte, error) {
 	return nil, io.ErrUnexpectedEOF
 }
 
-// Read le dados do buffer primeiro, e depois diretamente do socket real.
+// Read reads from the buffered reader, consuming peeked bytes first.
 func (bc *BufferedConn) Read(b []byte) (int, error) {
 	return bc.reader.Read(b)
 }

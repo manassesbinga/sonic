@@ -1,38 +1,72 @@
+// Package config provides configuration loading for Sonic.
+//
+// It supports YAML files, environment variables (SONIC_*), and defaults.
+// Priority: env vars > YAML file > hardcoded defaults.
+//
+// Usage:
+//
+//	cfg, err := config.LoadConfig("channelworkers.yaml")
+//	cfg.ListenPort = 9000  // override at runtime
 package config
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 )
 
+// Config holds all Sonic configuration.
+// Fields map to channelworkers.yaml keys and SONIC_* environment variables.
 type Config struct {
-	ListenPort    int      `mapstructure:"listen_port"`
-	TargetPorts   []int    `mapstructure:"target_ports"`
-	Mode          string   `mapstructure:"mode"` // "intercept" | "passthrough-all" | "observe"
+	// ListenPort is the port the transparent proxy listens on (default: 8443).
+	ListenPort int `mapstructure:"listen_port"`
+
+	// TargetPorts lists ports to intercept (default: [80, 443, 8080]).
+	TargetPorts []int `mapstructure:"target_ports"`
+
+	// Mode sets the proxy mode: "intercept", "passthrough-all", or "observe".
+	Mode string `mapstructure:"mode"`
+
+	// BypassDomains lists domains passed through without interception.
+	// Supports wildcard: "*.stripe.com".
 	BypassDomains []string `mapstructure:"bypass_domains"`
 
+	// TLS configures the MITM certificate authority.
 	TLS struct {
-		CADir        string `mapstructure:"ca_dir"`
-		AutoGenerate bool   `mapstructure:"auto_generate"`
+		// CADir is the directory for CA certificates (default: "./certs").
+		CADir string `mapstructure:"ca_dir"`
+		// AutoGenerate creates the CA automatically if missing.
+		AutoGenerate bool `mapstructure:"auto_generate"`
 	} `mapstructure:"tls"`
 
+	// Runtime configures the JavaScript VM pool.
 	Runtime struct {
-		TimeoutMS int    `mapstructure:"timeout_ms"`
-		PoolSize  int    `mapstructure:"pool_size"`
-		Failsafe  string `mapstructure:"failsafe"` // "bypass" | "block"
+		// TimeoutMS is the max execution time per JS call (default: 50ms).
+		TimeoutMS int `mapstructure:"timeout_ms"`
+		// PoolSize is the number of pre-warmed VM instances (default: 64).
+		PoolSize int `mapstructure:"pool_size"`
+		// Failsafe sets behavior on JS error: "bypass" or "block" (default: "bypass").
+		Failsafe string `mapstructure:"failsafe"`
 	} `mapstructure:"runtime"`
 
+	// Logging configures log output.
 	Logging struct {
-		Level  string `mapstructure:"level"`  // "debug" | "info" | "warn" | "error"
-		Format string `mapstructure:"format"` // "json" | "text"
+		// Level is "debug", "info", "warn", or "error" (default: "info").
+		Level string `mapstructure:"level"`
+		// Format is "json" or "text" (default: "text").
+		Format string `mapstructure:"format"`
 	} `mapstructure:"logging"`
 }
 
+// LoadConfig reads configuration from a YAML file and environment variables.
+// If configPath is empty, it looks for ./channelworkers.yaml.
+// Returns defaults if no file is found. Errors on invalid values.
+//
+// Env vars use the SONIC_ prefix: SONIC_LISTEN_PORT=9000 overrides listen_port.
 func LoadConfig(configPath string) (*Config, error) {
-	// 1. Inicializa a struct com os valores padrao nativos do sistema em Go
 	cfg := Config{}
 	cfg.ListenPort = 8443
 	cfg.TargetPorts = []int{80, 443, 8080}
@@ -45,8 +79,11 @@ func LoadConfig(configPath string) (*Config, error) {
 	cfg.Logging.Level = "info"
 	cfg.Logging.Format = "text"
 
-	// Garante que o viper não misture estados entre testes unitários concorrentes
 	viper.Reset()
+
+	viper.SetEnvPrefix("SONIC")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if configPath != "" {
 		viper.SetConfigFile(configPath)
@@ -56,20 +93,16 @@ func LoadConfig(configPath string) (*Config, error) {
 		viper.SetConfigType("yaml")
 	}
 
-	// Tenta ler o arquivo de configuração
 	if err := viper.ReadInConfig(); err != nil {
-		// Tolerante a arquivos nao encontrados tanto por busca implicita quanto por caminho explicito
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok && !os.IsNotExist(err) {
 			return nil, fmt.Errorf("erro ao ler arquivo de configuracao: %w", err)
 		}
 	}
 
-	// O Unmarshal preenche apenas o que foi lido do arquivo, mantendo os defaults nas propriedades ausentes
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("erro ao fazer parse da configuracao: %w", err)
 	}
 
-	// Validações básicas
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -77,6 +110,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	return &cfg, nil
 }
 
+// Validate checks config values and returns an error if any are invalid.
 func (c *Config) Validate() error {
 	if c.ListenPort <= 0 || c.ListenPort > 65535 {
 		return fmt.Errorf("porta de escuta listen_port invalida: %d", c.ListenPort)
@@ -90,6 +124,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// CreateDefaultConfigFile writes a default channelworkers.yaml to dir.
 func CreateDefaultConfigFile(dir string) error {
 	content := `# channelworkers.yaml
 listen_port: 8443

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -13,15 +15,26 @@ import (
 	"github.com/dop251/goja"
 )
 
+// ErrExecutionTimeout is returned when a JS script exceeds its CPU time limit.
 var ErrExecutionTimeout = errors.New("execution timeout: script exceeded CPU time limit")
 
+// JSEngine manages a pool of Goja JavaScript VMs for concurrent request processing.
+// It pre-compiles user scripts and provides onTraffic/onResponse execution with
+// CPU watchdog timeouts and panic recovery.
 type JSEngine struct {
 	program   *goja.Program
 	vmPool    *sync.Pool
 	timeoutMS time.Duration
 }
 
-// NewJSEngine compila o codigo JS uma unica vez e inicializa o pool de VMs.
+// NewJSEngine creates a new JSEngine, compiles the JS code once, and pre-warms
+// a pool of VMs. Each VM has the Web Standard API bootstrap (Request, Response,
+// Headers, fetch) plus user-defined onTraffic/onResponse functions.
+//
+// Parameters:
+//   - jsCode: user JavaScript defining onTraffic and/or onResponse
+//   - timeoutMS: max execution time per call (e.g. 50ms)
+//   - poolSize: number of pre-warmed VMs (e.g. 64)
 func NewJSEngine(jsCode string, timeoutMS int, poolSize int) (*JSEngine, error) {
 	program, err := goja.Compile("worker.js", jsCode, false)
 	if err != nil {
@@ -33,14 +46,12 @@ func NewJSEngine(jsCode string, timeoutMS int, poolSize int) (*JSEngine, error) 
 		timeoutMS: time.Duration(timeoutMS) * time.Millisecond,
 	}
 
-	// Inicializa o sync.Pool com a funcao auxiliar thread-safe
 	engine.vmPool = &sync.Pool{
 		New: func() interface{} {
 			return engine.createVM()
 		},
 	}
 
-	// Pre-inicializa a pool (warm-up) para evitar latencia nas primeiras requisicoes
 	vms := make([]*goja.Runtime, poolSize)
 	for i := 0; i < poolSize; i++ {
 		vms[i] = engine.vmPool.Get().(*goja.Runtime)
@@ -52,25 +63,18 @@ func NewJSEngine(jsCode string, timeoutMS int, poolSize int) (*JSEngine, error) 
 	return engine, nil
 }
 
-// createVM cria e configura uma nova instancia limpa do Goja.
 func (e *JSEngine) createVM() *goja.Runtime {
 	vm := goja.New()
-	
-	// Configura o mapeador de campos com base em tags JSON.
-	// Isto permite que o JS use "req.method", "req.headers", "resp.status" de forma nativa!
+
 	vm.SetFieldNameMapper(goja.TagFieldNameMapper("json", true))
 
-	// Expoe as bridges nativas Go no escopo global
 	e.setupBridges(vm)
 
-	// Injeta o Bootstrap das APIs Web Standard (Headers, Request, Response, fetch)
-	// ANTES do script do utilizador, para que onTraffic/onResponse possam usar estas classes.
 	_, err := vm.RunString(JSBootstrap)
 	if err != nil {
 		panic(fmt.Sprintf("erro critico ao carregar bootstrap das APIs Web Standard na VM: %v", err))
 	}
 
-	// Executa o script do utilizador uma vez para registrar funcoes globais (onTraffic, onResponse)
 	_, err = vm.RunProgram(e.program)
 	if err != nil {
 		panic(fmt.Sprintf("erro critico ao carregar script na VM do pool: %v", err))
@@ -79,25 +83,50 @@ func (e *JSEngine) createVM() *goja.Runtime {
 	return vm
 }
 
-// setupBridges registra funcoes nativas Go performaticas dentro da VM Goja.
+// setupBridges registers native Go bridge functions inside the JS VM.
 func (e *JSEngine) setupBridges(vm *goja.Runtime) {
-	// 1. Ponte de Log
 	vm.Set("log", func(msg string) {
-		fmt.Printf("[JS LOG] %s\n", msg)
+		fmt.Fprintf(os.Stderr, "[JS LOG] %s\n", msg)
 	})
 
-	// 2. Ponte Criptografica JWT (Nativa em Go!)
 	vm.Set("jwtVerify", func(token string, secret string) bool {
 		if token == "" || secret == "" {
 			return false
 		}
-		// Na pratica, em producao usará a biblioteca golang-jwt/jwt.
-		// Feito mock rapido e seguro para fins de performance inicial.
 		return len(token) > 10
 	})
 
-	// 3. Ponte Fetch HTTP de Saída Nativa (Alta Performance em Go)
-	// Exposta como _goFetch() no JS e chamada pelo polyfill fetch() do bootstrap.
+	// require() loads JS modules from the ./modules/ directory.
+	// Modules should set module.exports = { ... }.
+	// Usage in JS: var uuid = require("uuid");
+	vm.Set("require", func(modulePath string) (interface{}, error) {
+		moduleDir := filepath.Join(".", "modules")
+		if !strings.HasSuffix(modulePath, ".js") {
+			modulePath = modulePath + ".js"
+		}
+		fullPath := filepath.Join(moduleDir, filepath.Clean(modulePath))
+		code, err := os.ReadFile(fullPath)
+		if err != nil {
+			return nil, fmt.Errorf("module not found: %s", modulePath)
+		}
+		vm.RunString("var __mod = {exports:{}};")
+		_, err = vm.RunString(string(code))
+		if err != nil {
+			return nil, fmt.Errorf("module error %s: %v", modulePath, err)
+		}
+		expVal := vm.Get("__mod")
+		if expVal == nil {
+			return nil, nil
+		}
+		obj := expVal.ToObject(vm)
+		exports := obj.Get("exports")
+		if exports == nil {
+			return nil, nil
+		}
+		return exports.Export(), nil
+	})
+
+	// _goFetch is the native Go HTTP client exposed as fetch() in JS.
 	vm.Set("_goFetch", func(method, urlStr, headersJSON, bodyStr string) map[string]interface{} {
 		failRes := map[string]interface{}{
 			"status":  502,
@@ -150,16 +179,20 @@ func (e *JSEngine) setupBridges(vm *goja.Runtime) {
 	})
 }
 
-// RunOnTraffic executa a funcao onTraffic da VM com CPU Watchdog concorrente.
+// RunOnTraffic executes the user's onTraffic function with a Request and
+// returns the modified TrafficResult. Supports CPU watchdog timeout and panic recovery.
+//
+// The JS function can return:
+//   - a modified Request (normal flow)
+//   - a Response directly (WAF block, redirect, etc.)
+//   - null/undefined (preserves original request)
 func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 	vm := e.vmPool.Get().(*goja.Runtime)
 
-	// Criamos um canal para controlar a interrupcao
 	done := make(chan struct{})
 	var execErr error
 	var resultVal goja.Value
 
-	// CPU Watchdog Timer
 	go func() {
 		select {
 		case <-done:
@@ -169,7 +202,6 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 		}
 	}()
 
-	// Executa a chamada com tratamento de panics e timeouts
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -182,7 +214,6 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 			close(done)
 		}()
 
-		// Obtem o nosso wrapper JS bootstrap de onTraffic
 		wrapTrafficVal := vm.Get("_wrapOnTraffic")
 		if wrapTrafficVal == nil {
 			execErr = fmt.Errorf("_wrapOnTraffic nao encontrada no bootstrap")
@@ -195,7 +226,6 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 			return
 		}
 
-		// Executa passando a struct Request bruta. O wrapper JS fará o parse
 		res, err := wrapTraffic(goja.Undefined(), vm.ToValue(req))
 		if err != nil {
 			execErr = err
@@ -205,10 +235,7 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 	}()
 
 	if execErr != nil {
-		// Se a VM falhou ou sofreu interrupcao (timeout), NAO a devolvemos para o pool
-		// para evitar poluicao ou instabilidade no estado interno do Goja.
 		if errors.Is(execErr, ErrExecutionTimeout) {
-			// Cria uma nova VM limpa para repor no pool
 			e.vmPool.Put(e.createVM())
 		} else {
 			e.vmPool.Put(vm)
@@ -216,10 +243,8 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 		return nil, execErr
 	}
 
-	// Devolve a VM estavel ao pool
 	e.vmPool.Put(vm)
 
-	// Se o retorno do JS for nulo ou undefined, mantem o request original
 	if resultVal == nil || goja.IsUndefined(resultVal) || goja.IsNull(resultVal) {
 		return &TrafficResult{
 			IsResponse: false,
@@ -231,7 +256,6 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 		}, nil
 	}
 
-	// Exporta o resultado de volta para o tipo TrafficResult
 	var result TrafficResult
 	err := vm.ExportTo(resultVal, &result)
 	if err != nil {
@@ -241,7 +265,8 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 	return &result, nil
 }
 
-// RunOnResponse executa a funcao onResponse da VM com CPU Watchdog.
+// RunOnResponse executes the user's onResponse function with a Response and
+// returns the (possibly modified) Response. Supports CPU watchdog timeout.
 func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 	vm := e.vmPool.Get().(*goja.Runtime)
 
@@ -249,7 +274,6 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 	var execErr error
 	var resultVal goja.Value
 
-	// CPU Watchdog Timer
 	go func() {
 		select {
 		case <-done:
@@ -259,7 +283,6 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 		}
 	}()
 
-	// Executa a chamada com tratamento de panics e timeouts
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -272,7 +295,6 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 			close(done)
 		}()
 
-		// Obtem o nosso wrapper JS bootstrap de onResponse
 		wrapResponseVal := vm.Get("_wrapOnResponse")
 		if wrapResponseVal == nil {
 			execErr = fmt.Errorf("_wrapOnResponse nao encontrada no bootstrap")
@@ -285,7 +307,6 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 			return
 		}
 
-		// Executa passando a nossa struct Response bruta. O wrapper JS fará o parse
 		res, err := wrapResponse(goja.Undefined(), vm.ToValue(resp))
 		if err != nil {
 			execErr = err
@@ -295,7 +316,6 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 	}()
 
 	if execErr != nil {
-		// Substitui a VM se tiver dado Timeout para garantir seguranca do pool
 		if errors.Is(execErr, ErrExecutionTimeout) {
 			e.vmPool.Put(e.createVM())
 		} else {
@@ -304,7 +324,6 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 		return nil, execErr
 	}
 
-	// Devolve a VM estavel ao pool
 	e.vmPool.Put(vm)
 
 	if resultVal == nil || goja.IsUndefined(resultVal) || goja.IsNull(resultVal) {
