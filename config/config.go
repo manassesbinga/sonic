@@ -5,7 +5,7 @@
 //
 // Usage:
 //
-//	cfg, err := config.LoadConfig("channelworkers.yaml")
+//	cfg, err := config.LoadConfig("sonic.yaml")
 //	cfg.ListenPort = 9000  // override at runtime
 package config
 
@@ -19,7 +19,7 @@ import (
 )
 
 // Config holds all Sonic configuration.
-// Fields map to channelworkers.yaml keys and SONIC_* environment variables.
+// Fields map to sonic.yaml keys and SONIC_* environment variables.
 type Config struct {
 	// ListenPort is the port the transparent proxy listens on (default: 8443).
 	ListenPort int `mapstructure:"listen_port"`
@@ -62,7 +62,7 @@ type Config struct {
 }
 
 // LoadConfig reads configuration from a YAML file and environment variables.
-// If configPath is empty, it looks for ./channelworkers.yaml.
+// If configPath is empty, it looks for ./sonic.yaml.
 // Returns defaults if no file is found. Errors on invalid values.
 //
 // Env vars use the SONIC_ prefix: SONIC_LISTEN_PORT=9000 overrides listen_port.
@@ -124,9 +124,9 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// CreateDefaultConfigFile writes a default channelworkers.yaml to dir.
+// CreateDefaultConfigFile writes a default sonic.yaml to dir.
 func CreateDefaultConfigFile(dir string) error {
-	content := `# channelworkers.yaml
+	content := `# sonic.yaml
 listen_port: 8443
 target_ports:
   - 80
@@ -152,6 +152,6 @@ logging:
   level: "info"
   format: "text"
 `
-	filePath := filepath.Join(dir, "channelworkers.yaml")
+	filePath := filepath.Join(dir, "sonic.yaml")
 	return os.WriteFile(filePath, []byte(content), 0644)
 }

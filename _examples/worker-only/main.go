@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log"
 
-	"channelworkers/sdk"
+	"github.com/manassesbinga/sonic/sdk"
 )
 
 const workerCode = `

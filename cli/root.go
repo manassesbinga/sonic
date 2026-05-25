@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -56,7 +57,7 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default ./channelworkers.yaml)")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default ./sonic.yaml)")
 	RootCmd.PersistentFlags().StringVarP(&mode, "mode", "m", "", `override mode: "intercept", "passthrough-all", "observe"`)
 
 	RootCmd.CompletionOptions.DisableDefaultCmd = true
@@ -104,7 +105,7 @@ func readAndUnifyFunctions(dir string) (string, error) {
 
 	for _, file := range files {
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".js") {
-			content, err := os.ReadFile(dir + "/" + file.Name())
+			content, err := os.ReadFile(filepath.Join(dir, file.Name()))
 			if err != nil {
 				return "", fmt.Errorf("erro ao ler %s: %w", file.Name(), err)
 			}

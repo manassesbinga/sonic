@@ -53,8 +53,8 @@ system capabilities, and configuration.`,
 			fmt.Println("    Files:    " + workerFiles)
 		}
 
-		if _, err := os.Stat("./channelworkers.yaml"); err == nil {
-			fmt.Println("    Config:   channelworkers.yaml " + Green("✓"))
+		if _, err := os.Stat("./sonic.yaml"); err == nil {
+			fmt.Println("    Config:   sonic.yaml " + Green("✓"))
 		} else {
 			fmt.Println("    Config:   " + Yellow("not found (run 'sonic init')"))
 		}

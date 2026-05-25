@@ -125,7 +125,7 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 		t.Fatalf("Erro ao criar arquivo de configuracao padrao: %v", err)
 	}
 
-	expectedFile := filepath.Join(tempDir, "channelworkers.yaml")
+	expectedFile := filepath.Join(tempDir, "sonic.yaml")
 	if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
 		t.Errorf("Arquivo de configuracao padrao nao foi gerado em %s", expectedFile)
 	}

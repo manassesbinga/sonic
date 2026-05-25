@@ -24,7 +24,7 @@ sonic — Self-hosted Cloudflare Workers alternative
 ## Quick Start
 
 ```bash
-go install channelworkers@latest
+go install github.com/manassesbinga/sonic@latest
 
 # Initialize a project
 sonic init
@@ -58,7 +58,7 @@ sonic start
 Use Sonic as an embeddable Go library:
 
 ```go
-import "channelworkers/sdk"
+import "github.com/manassesbinga/sonic/sdk"
 
 // Start the proxy with a JS worker
 s, err := sonic.New(sonic.Config{
@@ -110,10 +110,10 @@ type Config struct {
 Use sub-packages for finer control:
 
 ```go
-import "channelworkers/runtime"  // JS engine
-import "channelworkers/mitm"     // TLS MITM
-import "channelworkers/proxy"    // Transparent proxy
-import "channelworkers/config"   // Configuration
+import "github.com/manassesbinga/sonic/runtime"  // JS engine
+import "github.com/manassesbinga/sonic/mitm"     // TLS MITM
+import "github.com/manassesbinga/sonic/proxy"    // Transparent proxy
+import "github.com/manassesbinga/sonic/config"   // Configuration
 ```
 
 ## Worker API
@@ -164,7 +164,7 @@ request.headers.set("X-Request-ID", uuid.v4());
 
 ## Configuration
 
-Config via `channelworkers.yaml` or environment variables (`SONIC_*`):
+Config via `sonic.yaml` or environment variables (`SONIC_*`):
 
 ```yaml
 listen_port: 8443
@@ -223,7 +223,7 @@ Client ──► Transparent Proxy (:8443)
 | **Docker** | `docker compose up -d` |
 | **Raspberry Pi** | `make release` → `dist/sonic-linux-arm64` |
 | **macOS** | `make build` (dev only, no eBPF) |
-| **Go app embed** | `import "channelworkers/sdk"` |
+| **Go app embed** | `import "github.com/manassesbinga/sonic/sdk"` |
 
 ## Makefile
 

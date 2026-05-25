@@ -15,7 +15,7 @@ RUN apk add --no-cache ca-certificates libcap
 
 COPY --from=builder /build/sonic /usr/local/bin/sonic
 COPY --from=builder /build/functions/hello.js /etc/sonic/functions/hello.js
-COPY --from=builder /build/channelworkers.yaml /etc/sonic/channelworkers.yaml
+COPY --from=builder /build/sonic.yaml /etc/sonic/sonic.yaml
 
 RUN mkdir -p /etc/sonic/certs /etc/sonic/functions && \
     chmod -R 755 /etc/sonic && \

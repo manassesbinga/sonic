@@ -13,7 +13,7 @@ services:
     volumes:
       - ./certs:/etc/sonic/certs
       - ./functions:/etc/sonic/functions
-      - ./channelworkers.yaml:/etc/sonic/channelworkers.yaml
+      - ./sonic.yaml:/etc/sonic/sonic.yaml
     environment:
       - SONIC_LISTEN_PORT=8443
       - SONIC_MODE=intercept

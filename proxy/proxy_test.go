@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	"channelworkers/config"
+	"github.com/manassesbinga/sonic/config"
 )
 
 func buildTLSClientHello(serverName string) []byte {

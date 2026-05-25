@@ -13,7 +13,7 @@ Restart=on-failure
 RestartSec=5
 LimitNOFILE=65536
 
-# Environment variables (override channelworkers.yaml)
+# Environment variables (override sonic.yaml)
 Environment=SONIC_LOG_LEVEL=info
 Environment=SONIC_LISTEN_PORT=8443
 

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"channelworkers/runtime"
+	"github.com/manassesbinga/sonic/runtime"
 
 	"github.com/spf13/cobra"
 )

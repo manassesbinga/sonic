@@ -5,7 +5,7 @@
 //
 // Basic usage:
 //
-//	import "channelworkers/sdk"
+//	import "github.com/manassesbinga/sonic/sdk"
 //
 //	// Start Sonic with JS worker
 //	s, err := sonic.New(sonic.Config{
@@ -26,13 +26,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
-	"channelworkers/config"
-	"channelworkers/mitm"
-	"channelworkers/proxy"
-	"channelworkers/runtime"
+	"github.com/manassesbinga/sonic/config"
+	"github.com/manassesbinga/sonic/mitm"
+	"github.com/manassesbinga/sonic/proxy"
+	"github.com/manassesbinga/sonic/runtime"
 )
 
 // Config configures the Sonic engine. All fields have sensible defaults.
@@ -155,7 +156,7 @@ func New(cfg Config) (*Sonic, error) {
 //
 // Example:
 //
-//	s, err := sonic.LoadConfig("channelworkers.yaml")
+//	s, err := sonic.LoadConfig("sonic.yaml")
 func LoadConfig(configPath string) (*Sonic, error) {
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
@@ -167,7 +168,7 @@ func LoadConfig(configPath string) (*Sonic, error) {
 		var sb strings.Builder
 		for _, f := range files {
 			if !f.IsDir() && strings.HasSuffix(f.Name(), ".js") {
-				data, _ := os.ReadFile("./functions/" + f.Name())
+				data, _ := os.ReadFile(filepath.Join("./functions", f.Name()))
 				sb.Write(data)
 				sb.WriteString("\n")
 			}

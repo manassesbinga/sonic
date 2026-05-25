@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"channelworkers/config"
-	"channelworkers/mitm"
-	"channelworkers/proxy"
-	"channelworkers/runtime"
+	"github.com/manassesbinga/sonic/config"
+	"github.com/manassesbinga/sonic/mitm"
+	"github.com/manassesbinga/sonic/proxy"
+	"github.com/manassesbinga/sonic/runtime"
 )
 
 // ── Helpers ─────────────────────────────────────────────

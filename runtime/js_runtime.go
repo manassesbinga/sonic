@@ -83,6 +83,17 @@ func (e *JSEngine) createVM() *goja.Runtime {
 	return vm
 }
 
+// getVM retrieves a VM from the pool, recovering from any pool creation panics.
+func (e *JSEngine) getVM() (vm *goja.Runtime, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("VM creation failed: %v", r)
+		}
+	}()
+	vm = e.vmPool.Get().(*goja.Runtime)
+	return vm, nil
+}
+
 // setupBridges registers native Go bridge functions inside the JS VM.
 func (e *JSEngine) setupBridges(vm *goja.Runtime) {
 	vm.Set("log", func(msg string) {
@@ -187,7 +198,10 @@ func (e *JSEngine) setupBridges(vm *goja.Runtime) {
 //   - a Response directly (WAF block, redirect, etc.)
 //   - null/undefined (preserves original request)
 func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
-	vm := e.vmPool.Get().(*goja.Runtime)
+	vm, err := e.getVM()
+	if err != nil {
+		return nil, err
+	}
 
 	done := make(chan struct{})
 	var execErr error
@@ -257,7 +271,7 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 	}
 
 	var result TrafficResult
-	err := vm.ExportTo(resultVal, &result)
+	err = vm.ExportTo(resultVal, &result)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao mapear retorno do JS para TrafficResult: %w", err)
 	}
@@ -268,7 +282,10 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 // RunOnResponse executes the user's onResponse function with a Response and
 // returns the (possibly modified) Response. Supports CPU watchdog timeout.
 func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
-	vm := e.vmPool.Get().(*goja.Runtime)
+	vm, err := e.getVM()
+	if err != nil {
+		return nil, err
+	}
 
 	done := make(chan struct{})
 	var execErr error
@@ -331,7 +348,7 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 	}
 
 	var modifiedResp Response
-	err := vm.ExportTo(resultVal, &modifiedResp)
+	err = vm.ExportTo(resultVal, &modifiedResp)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao mapear retorno do JS para Response: %w", err)
 	}

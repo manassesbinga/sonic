@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"channelworkers/config"
+	"github.com/manassesbinga/sonic/config"
 
 	"github.com/spf13/cobra"
 )

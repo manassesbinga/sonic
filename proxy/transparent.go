@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"channelworkers/config"
-	"channelworkers/mitm"
-	"channelworkers/runtime"
+	"github.com/manassesbinga/sonic/config"
+	"github.com/manassesbinga/sonic/mitm"
+	"github.com/manassesbinga/sonic/runtime"
 )
 
 // TransparentProxy is the core proxy that intercepts TLS connections,

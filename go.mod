@@ -1,4 +1,4 @@
-module channelworkers
+module github.com/manassesbinga/sonic
 
 go 1.24.0
 

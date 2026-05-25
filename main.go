@@ -1,6 +1,6 @@
 package main
 
-import "channelworkers/cli"
+import "github.com/manassesbinga/sonic/cli"
 
 func main() {
 	cli.Execute()
