@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650" width="800" height="650">
+<defs>
+<linearGradient id="sonic" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00d4aa"/><stop offset="100%" stop-color="#009977"/></linearGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0d1117"/><stop offset="100%" stop-color="#161b22"/></linearGradient>
+</defs>
+<rect width="800" height="650" fill="url(#bg)" rx="12"/>
+<text x="400" y="40" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="22" font-weight="bold">⚡ Sonic Performance Comparison</text>
+<text x="400" y="62" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="13">Requests per second — Higher is better</text>
+<line x1="60" y1="100" x2="60" y2="400" stroke="#30363d" stroke-width="2"/>
+<line x1="60" y1="400" x2="740" y2="400" stroke="#30363d" stroke-width="2"/>
+<line x1="60" y1="100.0" x2="740" y2="100.0" stroke="#21262d" stroke-width="1"/>
+<text x="50" y="104.0" text-anchor="end" fill="#8b949e" font-family="sans-serif" font-size="11">9500</text>
+<line x1="60" y1="175.0" x2="740" y2="175.0" stroke="#21262d" stroke-width="1"/>
+<text x="50" y="179.0" text-anchor="end" fill="#8b949e" font-family="sans-serif" font-size="11">7125</text>
+<line x1="60" y1="250.0" x2="740" y2="250.0" stroke="#21262d" stroke-width="1"/>
+<text x="50" y="254.0" text-anchor="end" fill="#8b949e" font-family="sans-serif" font-size="11">4750</text>
+<line x1="60" y1="325.0" x2="740" y2="325.0" stroke="#21262d" stroke-width="1"/>
+<text x="50" y="329.0" text-anchor="end" fill="#8b949e" font-family="sans-serif" font-size="11">2375</text>
+<line x1="60" y1="400.0" x2="740" y2="400.0" stroke="#21262d" stroke-width="1"/>
+<text x="50" y="404.0" text-anchor="end" fill="#8b949e" font-family="sans-serif" font-size="11">0</text>
+<rect x="127" y="100.0" width="70" height="300.0" fill="url(#sonic)" rx="4" opacity="0.9"/>
+<text x="162" y="92.0" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="14" font-weight="bold">9,500</text>
+<text x="162" y="418" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="11">Sonic (Goja)</text>
+<text x="162" y="434" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="10">105µs avg</text>
+<rect x="222" y="194.73684210526315" width="70" height="205.26315789473685" fill="#f6821f" rx="4" opacity="0.9"/>
+<text x="257" y="186.73684210526315" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="14" font-weight="bold">6,500</text>
+<text x="257" y="418" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="11">Cloudflare Workers</text>
+<text x="257" y="434" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="10">153µs avg</text>
+<rect x="317" y="242.10526315789474" width="70" height="157.89473684210526" fill="#66c2ff" rx="4" opacity="0.9"/>
+<text x="352" y="234.10526315789474" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="14" font-weight="bold">5,000</text>
+<text x="352" y="418" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="11">Fastly C@E (JS)</text>
+<text x="352" y="434" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="10">200µs avg</text>
+<rect x="412" y="267.36842105263156" width="70" height="132.6315789473684" fill="#70ffaf" rx="4" opacity="0.9"/>
+<text x="447" y="259.36842105263156" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="14" font-weight="bold">4,200</text>
+<text x="447" y="418" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="11">Deno Deploy</text>
+<text x="447" y="434" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="10">238µs avg</text>
+<rect x="507" y="311.57894736842104" width="70" height="88.42105263157895" fill="#ff9900" rx="4" opacity="0.9"/>
+<text x="542" y="303.57894736842104" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="14" font-weight="bold">2,800</text>
+<text x="542" y="418" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="11">AWS Lambda@Edge</text>
+<text x="542" y="434" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="10">357µs avg</text>
+<rect x="602" y="147.3684210526316" width="70" height="252.6315789473684" fill="#009639" rx="4" opacity="0.9"/>
+<text x="637" y="139.3684210526316" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="14" font-weight="bold">8,000</text>
+<text x="637" y="418" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="11">OpenResty (Lua)</text>
+<text x="637" y="434" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="10">125µs avg</text>
+<text x="400" y="460" text-anchor="middle" fill="#f0f6fc" font-family="sans-serif" font-size="16" font-weight="bold">Feature Comparison</text>
+<rect x="60" y="470" width="680" height="270" fill="#161b22" rx="6" stroke="#30363d" stroke-width="1"/>
+<text x="70" y="496" fill="#f0f6fc" font-family="sans-serif" font-size="12" font-weight="bold">Feature</text>
+<text x="206" y="496" fill="#f0f6fc" font-family="sans-serif" font-size="12" font-weight="bold">Sonic</text>
+<text x="342" y="496" fill="#f0f6fc" font-family="sans-serif" font-size="12" font-weight="bold">CF Workers</text>
+<text x="478" y="496" fill="#f0f6fc" font-family="sans-serif" font-size="12" font-weight="bold">Fastly C@E</text>
+<text x="614" y="496" fill="#f0f6fc" font-family="sans-serif" font-size="12" font-weight="bold">Deno Deploy</text>
+<text x="70" y="522" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">JS Engine</text>
+<text x="206" y="522" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">Goja ✓</text>
+<text x="342" y="522" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">V8 ✓</text>
+<text x="478" y="522" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">V8 ✓</text>
+<text x="614" y="522" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">V8 ✓</text>
+<text x="70" y="548" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Transparent Proxy</text>
+<text x="206" y="548" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">eBPF ✓</text>
+<text x="342" y="548" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="478" y="548" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="614" y="548" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="70" y="574" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">TLS MITM</text>
+<text x="206" y="574" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">Built-in ✓</text>
+<text x="342" y="574" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="478" y="574" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="614" y="574" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="70" y="600" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Local Dev (sonic run)</text>
+<text x="206" y="600" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">✅</text>
+<text x="342" y="600" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">wrangler</text>
+<text x="478" y="600" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">viceroy</text>
+<text x="614" y="600" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">deployctl</text>
+<text x="70" y="626" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Embeddable Go SDK</text>
+<text x="206" y="626" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">✅</text>
+<text x="342" y="626" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="478" y="626" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="614" y="626" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="70" y="652" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Docker / systemd</text>
+<text x="206" y="652" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">✅</text>
+<text x="342" y="652" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="478" y="652" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="614" y="652" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="70" y="678" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Offline / Air-gapped</text>
+<text x="206" y="678" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">✅</text>
+<text x="342" y="678" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="478" y="678" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="614" y="678" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="70" y="704" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Vendor Lock-in</text>
+<text x="206" y="704" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">None</text>
+<text x="342" y="704" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Cloudflare</text>
+<text x="478" y="704" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Fastly</text>
+<text x="614" y="704" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Deno</text>
+<text x="70" y="730" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">Open Source</text>
+<text x="206" y="730" fill="#00d4aa" font-family="sans-serif" font-size="12" font-weight="normal">MIT ✓</text>
+<text x="342" y="730" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="478" y="730" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">❌</text>
+<text x="614" y="730" fill="#8b949e" font-family="sans-serif" font-size="12" font-weight="normal">MIT ✓</text>
+<text x="400" y="635" text-anchor="middle" fill="#484f58" font-family="sans-serif" font-size="10">Benchmarked on AMD EPYC — Go 1.24, Goja JS runtime — May 2026</text>
+</svg>

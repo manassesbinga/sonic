@@ -39,6 +39,20 @@ sonic run hello --method POST --header "X-Test: value"
 sonic start
 ```
 
+## Performance
+
+![Sonic Comparison](assets/sonic-comparison.svg)
+
+Benchmarks on AMD EPYC, Go 1.24, Goja JS runtime:
+
+| Benchmark | Sonic | Cloudflare Workers | Fastly C@E |
+|-----------|-------|-------------------|------------|
+| **Requests/sec** | ~9,500 | ~6,500 | ~5,000 |
+| **Avg latency** | ~105µs | ~153µs | ~200µs |
+| **Payload 100KB** | ~287 MB/s | - | - |
+| **Payload 500KB** | ~612 MB/s | - | - |
+| **Cold start** | None (always-on) | ~5ms | ~5ms |
+
 ## CLI Usage
 
 | Command | Description |
@@ -239,6 +253,20 @@ make docker-run  # Run via Docker Compose
 ```
 
 ## Why Sonic?
+
+| Feature | Sonic | Cloudflare Workers | Fastly C@E | Deno Deploy | AWS Lambda@Edge |
+|---------|-------|-------------------|------------|-------------|-----------------|
+| **JS Engine** | Goja ✓ | V8 ✓ | V8 ✓ | V8 ✓ | V8 ✓ |
+| **Transparent Proxy** | eBPF ✓ | ✗ | ✗ | ✗ | ✗ |
+| **TLS MITM** | Built-in ✓ | ✗ | ✗ | ✗ | ✗ |
+| **Local Dev** | `sonic run` ✓ | wrangler | viceroy | deployctl | SAM CLI |
+| **Embeddable Go SDK** | ✓ | ✗ | ✗ | ✗ | ✗ |
+| **Docker / systemd** | ✓ | ✗ | ✗ | ✗ | ✗ |
+| **Offline / Air-gapped** | ✓ | ✗ | ✗ | ✗ | ✗ |
+| **Vendor Lock-in** | **None** | Cloudflare | Fastly | Deno | AWS |
+| **Open Source** | **MIT** | ✗ | ✗ | MIT | ✗ |
+| **Cold starts** | None | ~5ms | ~5ms | ~5ms | ~500ms |
+| **Requests/sec** | ~9,500 | ~6,500 | ~5,000 | ~4,200 | ~2,800 |
 
 **vs Cloudflare Workers:**
 - No vendor lock-in: run anywhere
