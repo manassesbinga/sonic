@@ -284,7 +284,7 @@ make docker-run  # Run via Docker Compose
 adicionais 
 
 
-![Sonic Comparison](diagrama,png)
+![Sonic Comparison](diagrama.png)
 
 ![Sonic Comparison](fluxo.png)
 
