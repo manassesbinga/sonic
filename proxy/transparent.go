@@ -1,0 +1,329 @@
+package proxy
+
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"channelworkers/config"
+	"channelworkers/mitm"
+	"channelworkers/runtime"
+)
+
+type TransparentProxy struct {
+	cfg        *config.Config
+	mitmEngine *mitm.MITMEngine
+	jsEngine   *runtime.JSEngine
+	jsMutex    sync.RWMutex // Mutex de seguranca para hot-reload da VM concorrente
+	listener   net.Listener
+	shutdown   chan struct{}
+	wg         sync.WaitGroup
+}
+
+func NewTransparentProxy(cfg *config.Config, mitmEngine *mitm.MITMEngine, jsEngine *runtime.JSEngine) *TransparentProxy {
+	return &TransparentProxy{
+		cfg:        cfg,
+		mitmEngine: mitmEngine,
+		jsEngine:   jsEngine,
+		shutdown:   make(chan struct{}),
+	}
+}
+
+// SetJSEngine atualiza a VM de forma thread-safe durante o hot-reload
+func (p *TransparentProxy) SetJSEngine(engine *runtime.JSEngine) {
+	p.jsMutex.Lock()
+	p.jsEngine = engine
+	p.jsMutex.Unlock()
+}
+
+func (p *TransparentProxy) getJSEngine() *runtime.JSEngine {
+	p.jsMutex.RLock()
+	defer p.jsMutex.RUnlock()
+	return p.jsEngine
+}
+
+// Start inicia o Listener do Proxy transparente na porta configurada.
+func (p *TransparentProxy) Start() error {
+	addr := fmt.Sprintf(":%d", p.cfg.ListenPort)
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("falha ao iniciar listener proxy transparente na porta %d: %w", p.cfg.ListenPort, err)
+	}
+	p.listener = l
+	p.wg.Add(1)
+
+	go p.acceptConnections()
+
+	return nil
+}
+
+// Stop desliga o Listener de forma graciosa.
+func (p *TransparentProxy) Stop() {
+	close(p.shutdown)
+	if p.listener != nil {
+		p.listener.Close()
+	}
+	p.wg.Wait()
+}
+
+func (p *TransparentProxy) acceptConnections() {
+	defer p.wg.Done()
+
+	for {
+		conn, err := p.listener.Accept()
+		if err != nil {
+			select {
+			case <-p.shutdown:
+				return
+			default:
+				// Ignora erros de socket fechado durante o shutdown
+				continue
+			}
+		}
+
+		p.wg.Add(1)
+		go func(c net.Conn) {
+			defer p.wg.Done()
+			p.handleConnection(c)
+		}(conn)
+	}
+}
+
+func (p *TransparentProxy) handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	bufferedConn := NewBufferedConn(conn)
+
+	// Espreita os primeiros bytes para tentar decifrar o SNI do Client Hello TLS
+	peekBytes, err := bufferedConn.Peek(1024)
+	if err != nil {
+		// Se nao for TLS ou for conexao curta, cai no fallback ou fecha
+		return
+	}
+
+	domain, err := ExtractSNI(peekBytes)
+	if err != nil {
+		// Fallback se nao for TLS (pode ser HTTP simples ou erro de parsing)
+		// Em producao local, assume fallback silencioso
+		return
+	}
+
+	// Verifica se o dominio esta na lista de bypass (passthrough transparente)
+	if p.shouldBypass(domain) {
+		p.runPassthrough(bufferedConn, domain)
+		return
+	}
+
+	// Interceptacao TLS MITM
+	p.runIntercept(bufferedConn, domain)
+}
+
+func (p *TransparentProxy) shouldBypass(domain string) bool {
+	if p.cfg.Mode == "passthrough-all" {
+		return true
+	}
+
+	for _, bypassPattern := range p.cfg.BypassDomains {
+		// Suporta wildcard basico "*.example.com"
+		if strings.HasPrefix(bypassPattern, "*.") {
+			suffix := bypassPattern[1:] // ".example.com"
+			if strings.HasSuffix(domain, suffix) {
+				return true
+			}
+		}
+		if domain == bypassPattern {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *TransparentProxy) runPassthrough(clientConn net.Conn, domain string) {
+	// Liga diretamente ao porto HTTPS real (443)
+	serverAddr := fmt.Sprintf("%s:443", domain)
+	serverConn, err := net.DialTimeout("tcp", serverAddr, 5*time.Second)
+	if err != nil {
+		fmt.Printf("[PASSTHROUGH ERROR] Falha ao conectar ao servidor real %s: %v\n", serverAddr, err)
+		return
+	}
+	defer serverConn.Close()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(serverConn, clientConn)
+	}()
+
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(clientConn, serverConn)
+	}()
+
+	wg.Wait()
+}
+
+func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
+	// Termina o TLS (MITM) do lado do cliente
+	clientTLSConn, err := p.mitmEngine.InterceptTermTLS(clientConn, domain)
+	if err != nil {
+		fmt.Printf("[MITM ERROR] Falha no handshake terminação com o cliente (%s): %v\n", domain, err)
+		return
+	}
+	defer clientTLSConn.Close()
+
+	// Inicia handshake TLS de forma concorrente ou let-it-run
+	if err := clientTLSConn.Handshake(); err != nil {
+		fmt.Printf("[MITM ERROR] Handshake de terminacao TLS falhou: %v\n", err)
+		return
+	}
+
+	// Estabelece a conexao TLS encriptada de saída com o servidor real (re-encriptacao)
+	serverTLSConn, err := p.mitmEngine.ConnectRealServer(domain+":443", domain)
+	if err != nil {
+		fmt.Printf("[MITM ERROR] Falha ao re-encriptar conexao com o servidor real %s: %v\n", domain, err)
+		return
+	}
+	defer serverTLSConn.Close()
+
+	// Leitura e Loop de Requests HTTP transparentes
+	reader := bufio.NewReader(clientTLSConn)
+	for {
+		req, err := http.ReadRequest(reader)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return
+		}
+
+		// Converte para o Request exposto ao JS
+		jsReq := &runtime.Request{
+			Method:  req.Method,
+			URL:     req.URL.String(),
+			Path:    req.URL.Path,
+			Headers: make(map[string]string),
+		}
+		for k, v := range req.Header {
+			if len(v) > 0 {
+				jsReq.Headers[k] = v[0]
+			}
+		}
+
+		// Copia o body se houver
+		if req.Body != nil {
+			bodyBytes, _ := io.ReadAll(req.Body)
+			jsReq.Body = string(bodyBytes)
+			req.Body.Close()
+		}
+
+		// Executa a funcao JS onTraffic
+		trafficResult, err := p.getJSEngine().RunOnTraffic(jsReq)
+		if err != nil {
+			// Em caso de erro (ex: Watchdog Timeout), aplica failsafe
+			if p.cfg.Runtime.Failsafe == "block" {
+				resp := &http.Response{
+					StatusCode: 500,
+					ProtoMajor: 1,
+					ProtoMinor: 1,
+					Header:     make(http.Header),
+				}
+				_ = resp.Write(clientTLSConn)
+				return
+			}
+			// Se for "bypass", continua com o request original como TrafficResult
+			trafficResult = &runtime.TrafficResult{
+				IsResponse: false,
+				Method:     jsReq.Method,
+				URL:        jsReq.URL,
+				Path:       jsReq.Path,
+				Headers:    jsReq.Headers,
+				Body:       jsReq.Body,
+			}
+		}
+
+		// Se a funcao JS retornou um Response direto (ex: WAF bloqueio)
+		if trafficResult.IsResponse {
+			directResp := &http.Response{
+				Status:     fmt.Sprintf("%d %s", trafficResult.Status, http.StatusText(trafficResult.Status)),
+				StatusCode: trafficResult.Status,
+				ProtoMajor: 1,
+				ProtoMinor: 1,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(trafficResult.Body)),
+			}
+			for k, v := range trafficResult.Headers {
+				directResp.Header.Set(k, v)
+			}
+			_ = directResp.Write(clientTLSConn)
+			return
+		}
+
+		// Reconstrói o Request HTTP para o servidor real
+		newReq, err := http.NewRequest(trafficResult.Method, "https://"+domain+trafficResult.Path, strings.NewReader(trafficResult.Body))
+		if err != nil {
+			return
+		}
+		for k, v := range trafficResult.Headers {
+			newReq.Header.Set(k, v)
+		}
+
+		// Envia o request modificado ao servidor de destino real
+		if err := newReq.Write(serverTLSConn); err != nil {
+			return
+		}
+
+		// Le a resposta do servidor real
+		resp, err := http.ReadResponse(bufio.NewReader(serverTLSConn), newReq)
+		if err != nil {
+			return
+		}
+
+		// Converte para a Response exposta ao JS
+		jsResp := &runtime.Response{
+			Status:  resp.StatusCode,
+			Headers: make(map[string]string),
+		}
+		for k, v := range resp.Header {
+			if len(v) > 0 {
+				jsResp.Headers[k] = v[0]
+			}
+		}
+
+		if resp.Body != nil {
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			jsResp.Body = string(bodyBytes)
+			resp.Body.Close()
+		}
+
+		// Executa a funcao JS onResponse
+		modJSResp, err := p.getJSEngine().RunOnResponse(jsResp)
+		if err != nil {
+			// Em caso de erro, continua com a resposta original
+			modJSResp = jsResp
+		}
+
+		// Devolve a resposta modificada final ao cliente
+		newResp := &http.Response{
+			Status:     fmt.Sprintf("%d %s", modJSResp.Status, http.StatusText(modJSResp.Status)),
+			StatusCode: modJSResp.Status,
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(modJSResp.Body)),
+		}
+		for k, v := range modJSResp.Headers {
+			newResp.Header.Set(k, v)
+		}
+
+		if err := newResp.Write(clientTLSConn); err != nil {
+			return
+		}
+	}
+}
