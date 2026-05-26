@@ -1,10 +1,10 @@
 # Sonic — Edge JavaScript Engine
 
-![Sonic Presentation](image.png)
+![Sonic Presentation](logo.png)
 
 **Sonic** é um proxy L7 transparente com execução JavaScript na borda, acelerado por eBPF Sockmap e TLS MITM dinâmico. Compatível com a **API do Cloudflare Workers** — execute seus workers localmente, na borda da rede, sem vendor lock-in.
 
-📊 [Veja a apresentação completa de benchmarks](sonic.html)
+📊 [Veja a apresentação completa de benchmarks](comparacao.png)
 
 ```
   ⚡ Sonic — Self-hosted Cloudflare Workers alternative
@@ -16,6 +16,9 @@
 
 
 
+
+
+📊 [Veja a apresentação completa de benchmarks](teste.png)
 ---
 
 ## ⚡ Instalação Rápida (2 comandos)
