@@ -16,71 +16,106 @@ var infoCmd = &cobra.Command{
 system capabilities, and configuration.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println()
-		fmt.Println("  " + Bold("Sonic") + " " + Version)
-		fmt.Println("  " + strings.Repeat("─", 40))
+		PrintBanner(Version)
 		fmt.Println()
 
-		fmt.Println("  " + Bold("System:"))
-		fmt.Println("    OS:       " + runtime.GOOS + "/" + runtime.GOARCH)
-		fmt.Println("    Go:       " + runtime.Version())
-		fmt.Println("    CPUs:     " + fmt.Sprintf("%d", runtime.NumCPU()))
+		HRWithLabel("SYSTEM")
+		fmt.Println()
 
 		hasEbpf := runtime.GOOS == "linux"
-		ebpfStatus := Red("✗ not available")
+		ebpfStatus := Red("✗ Not available")
+		ebpfNote := Yellow("(eBPF requires Linux)")
 		if hasEbpf {
-			ebpfStatus = Green("✓ available (Linux)")
+			ebpfStatus = Green("✓ Available")
+			ebpfNote = Green("(Kernel bypass acceleration)")
 		}
-		fmt.Println("    eBPF:     " + ebpfStatus)
+
+		sysPairs := [][2]string{
+			{"OS", runtime.GOOS + "/" + runtime.GOARCH},
+			{"Go", runtime.Version()},
+			{"CPUs", fmt.Sprintf("%d cores", runtime.NumCPU())},
+			{"eBPF", ebpfStatus + " " + ebpfNote},
+		}
+
+		for _, p := range sysPairs {
+			KeyValue(p[0], p[1])
+		}
 		fmt.Println()
 
-		fmt.Println("  " + Bold("Project:"))
-		countWorkersStr := "0"
-		workerFiles := ""
-		if files, err := os.ReadDir("./functions"); err == nil {
-			count := 0
-			var names []string
-			for _, f := range files {
-				if !f.IsDir() && strings.HasSuffix(f.Name(), ".js") {
-					count++
-					names = append(names, f.Name())
-				}
-			}
-			countWorkersStr = fmt.Sprintf("%d", count)
-			workerFiles = strings.Join(names, ", ")
-		}
-		fmt.Println("    Workers:  " + countWorkersStr)
-		if workerFiles != "" {
-			fmt.Println("    Files:    " + workerFiles)
-		}
+		HRWithLabel("PROJECT")
+		fmt.Println()
+
+		hasConfig := false
+		hasCA := false
+		workerCount := 0
+		var workerNames []string
 
 		if _, err := os.Stat("./sonic.yaml"); err == nil {
-			fmt.Println("    Config:   sonic.yaml " + Green("✓"))
-		} else {
-			fmt.Println("    Config:   " + Yellow("not found (run 'sonic init')"))
+			hasConfig = true
 		}
-
 		if _, err := os.Stat("./certs/ca.pem"); err == nil {
-			fmt.Println("    CA cert:  certs/ca.pem " + Green("✓"))
-		} else {
-			fmt.Println("    CA cert:  " + Yellow("not generated (run 'sonic ca install')"))
+			hasCA = true
+		}
+
+		if files, err := os.ReadDir("./functions"); err == nil {
+			for _, f := range files {
+				if !f.IsDir() && strings.HasSuffix(f.Name(), ".js") {
+					workerCount++
+					workerNames = append(workerNames, f.Name())
+				}
+			}
+		}
+
+		KeyValueStatus("Config", "sonic.yaml", hasConfig)
+		KeyValueStatus("CA Cert", "certs/ca.pem", hasCA)
+
+		fmt.Println()
+		KeyValue("Workers", fmt.Sprintf("%d", workerCount))
+		if workerCount > 0 {
+			fmt.Printf("              %s\n", Cyan(strings.Join(workerNames, ", ")))
 		}
 		fmt.Println()
 
-		fmt.Println("  " + Bold("Runtime:"))
-		fmt.Println("    Engine:   goja (Go JavaScript VM)")
-		fmt.Println("    API:      Cloudflare Workers-compatible")
-		fmt.Println("    Protocol: HTTP/1.1, TLS 1.2+")
-		fmt.Println("    Proxy:    Transparent MITM (dynamic certs)")
+		HRWithLabel("RUNTIME")
 		fmt.Println()
 
-		fmt.Println("  " + Bold("CLI Commands:"))
-		fmt.Println("    " + Cyan("sonic init") + "      Initialize a project")
-		fmt.Println("    " + Cyan("sonic new <n>") + "   Create a worker")
-		fmt.Println("    " + Cyan("sonic run <f>") + "   Execute a worker directly")
-		fmt.Println("    " + Cyan("sonic list") + "      List workers")
-		fmt.Println("    " + Cyan("sonic start") + "     Start production proxy")
-		fmt.Println("    " + Cyan("sonic dev") + "       Start dev mode (hot-reload)")
-		fmt.Println("    " + Cyan("sonic ca install") + " Generate Root CA")
+		runtimePairs := [][2]string{
+			{"Engine", "goja (Pure Go JavaScript VM)"},
+			{"API", "Cloudflare Workers-compatible"},
+			{"Protocol", "HTTP/1.1, TLS 1.2+"},
+			{"Proxy", "Transparent MITM (dynamic certificates)"},
+		}
+
+		for _, p := range runtimePairs {
+			KeyValue(p[0], p[1])
+		}
+		fmt.Println()
+
+		HRWithLabel("QUICK COMMANDS")
+		fmt.Println()
+
+		commands := []struct {
+			cmd  string
+			desc string
+		}{
+			{"sonic init", "Initialize a new project"},
+			{"sonic new <name>", "Create a worker"},
+			{"sonic list", "List all workers"},
+			{"sonic run <name>", "Test a worker directly"},
+			{"sonic dev", "Development mode (hot-reload)"},
+			{"sonic start", "Production mode"},
+			{"sonic ca install", "Generate Root CA for TLS MITM"},
+		}
+
+		table := NewTable()
+		for _, c := range commands {
+			table.Append([]string{"", Cyan(fmt.Sprintf("%-22s", c.cmd)), Yellow(c.desc)})
+		}
+		table.Render()
+		fmt.Println()
+		HR()
+		fmt.Println()
+		PrintArrow("Docs: " + Blue("https://github.com/manassesbinga/sonic"))
 		fmt.Println()
 	},
 }

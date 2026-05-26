@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/manassesbinga/sonic/runtime"
+	"github.com/olekukonko/tablewriter"
 
 	"github.com/spf13/cobra"
 )
@@ -179,7 +180,8 @@ Shows file name, size, and exported function names (onTraffic, onResponse).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		files, err := os.ReadDir("./functions")
 		if err != nil {
-			fail("no functions/ directory found (run 'sonic init' first)")
+			ErrorBox("No functions/ directory found")
+			PrintArrow("Run 'sonic init' first to create a project")
 			return
 		}
 
@@ -191,39 +193,52 @@ Shows file name, size, and exported function names (onTraffic, onResponse).`,
 		}
 
 		if len(jsFiles) == 0 {
-			warn("no .js worker files in functions/")
-			info("create one: " + Cyan("sonic new myworker"))
+			Section("Workers")
+			PrintBullet(Yellow("No .js worker files found in functions/"))
+			PrintArrow("Create one: " + Cyan("sonic new myworker"))
 			return
 		}
 
+		HRWithLabel("WORKERS")
 		fmt.Println()
-		fmt.Println("  " + Bold("Available Workers:"))
-		fmt.Println("  " + strings.Repeat("─", 50))
-		for _, name := range jsFiles {
+
+		table := NewPrettyTable([]string{"#", "Worker", "Size", "Handlers"})
+		table.SetColumnAlignment([]int{
+			tablewriter.ALIGN_CENTER,
+			tablewriter.ALIGN_LEFT,
+			tablewriter.ALIGN_RIGHT,
+			tablewriter.ALIGN_LEFT,
+		})
+
+		for i, name := range jsFiles {
 			info, _ := os.Stat(filepath.Join("./functions", name))
-			size := ""
+			sizeStr := "-"
 			if info != nil {
-				size = fmt.Sprintf("(%d bytes)", info.Size())
+				sizeStr = formatSize(info.Size())
 			}
 			hasOnTraffic := detectFunction(filepath.Join("./functions", name), "onTraffic")
 			hasOnResponse := detectFunction(filepath.Join("./functions", name), "onResponse")
 
 			funcs := ""
 			if hasOnTraffic {
-				funcs += Green("onTraffic") + " "
+				funcs += "✓ onTraffic  "
 			}
 			if hasOnResponse {
-				funcs += Cyan("onResponse")
+				funcs += "✓ onResponse"
 			}
 			if funcs == "" {
-				funcs = Yellow("(no exported handlers)")
+				funcs = Yellow("(no handlers)")
 			}
 
-			fmt.Printf("  %s %s %s\n", Bold(name), size, funcs)
+			table.Append([]string{fmt.Sprintf("%d", i+1), Bold(name), sizeStr, funcs})
 		}
-		fmt.Println("  " + strings.Repeat("─", 50))
+
+		table.Render()
 		fmt.Println()
-		info("run a worker: " + Cyan("sonic run <name>"))
+		HR()
+		fmt.Println()
+		PrintArrow("Run a worker: " + Cyan("sonic run <name>"))
+		fmt.Println()
 	},
 }
 

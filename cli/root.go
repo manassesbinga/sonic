@@ -68,10 +68,29 @@ var versionCmd = &cobra.Command{
 	Short: "Print version information",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("sonic %s\n", Version)
-		fmt.Printf("runtime: goja (Go JavaScript VM)\n")
-		fmt.Printf("protocol: HTTP/1.1, TLS 1.2+\n")
-		fmt.Printf("api: Cloudflare Workers-compatible\n")
+		fmt.Println()
+		PrintBanner(Version)
+		fmt.Println()
+
+		HRWithLabel("VERSION INFO")
+		fmt.Println()
+
+		pairs := [][2]string{
+			{"Sonic", "v" + Version},
+			{"Engine", "goja (Pure Go JavaScript VM)"},
+			{"API", "Cloudflare Workers-compatible"},
+			{"Protocol", "HTTP/1.1, TLS 1.2+"},
+			{"License", "MIT"},
+		}
+
+		for _, p := range pairs {
+			KeyValue(p[0], p[1])
+		}
+		fmt.Println()
+		HR()
+		fmt.Println()
+		PrintArrow("GitHub: " + Blue("https://github.com/manassesbinga/sonic"))
+		fmt.Println()
 	},
 }
 
