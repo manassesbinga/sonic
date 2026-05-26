@@ -12,6 +12,104 @@
 
 ---
 
+## ⚡ Instalação Rápida (2 comandos)
+
+### Método 1: Binário pré-compilado (recomendado)
+
+```bash
+# Baixe para sua arquitetura
+wget https://github.com/manassesbinga/sonic/releases/download/v0.1.0/sonic-linux-amd64.tar.gz
+
+# Extraia e instale globalmente
+tar -xzf sonic-linux-amd64.tar.gz
+sudo ./install.sh
+
+# Pronto!
+sonic --help
+```
+
+| Arquivo | Plataforma |
+|---------|------------|
+| `sonic-linux-amd64.tar.gz` | Linux x86_64 |
+| `sonic-linux-arm64.tar.gz` | Linux ARM64 (Raspberry Pi, etc) |
+
+### Método 2: Via Go (se tiver Go instalado)
+
+```bash
+go install github.com/manassesbinga/sonic@latest
+```
+
+### Método 3: Do código fonte
+
+```bash
+git clone https://github.com/manassesbinga/sonic.git
+cd sonic
+sudo ./install.sh
+```
+
+---
+
+## 🚀 Quick Start (3 passos)
+
+```bash
+# 1. Inicialize um novo projeto
+sonic init
+
+# 2. Crie seu primeiro worker
+sonic new hello
+
+# 3. Execute em modo desenvolvimento (hot-reload)
+sonic dev
+```
+
+Ou teste um worker diretamente:
+```bash
+sonic run hello --method POST --header "X-Test: value"
+```
+
+Produção:
+```bash
+sonic start
+```
+
+---
+
+## 📖 Comandos CLI
+
+| Comando | Descrição |
+|---------|-----------|
+| `sonic init` | Inicializa novo projeto (cria `sonic.yaml`, `functions/`, `modules/`) |
+| `sonic new <nome>` | Cria um novo worker JavaScript em `functions/<nome>.js` |
+| `sonic list` | Lista todos os workers disponíveis |
+| `sonic run <nome>` | Executa um worker diretamente para teste |
+| `sonic dev` | Modo desenvolvimento com **hot-reload** |
+| `sonic start` | Modo produção |
+| `sonic info` | Mostra informações do projeto e sistema |
+| `sonic ca install` | Gera/instala Root CA para TLS MITM |
+| `sonic version` | Versão do Sonic |
+| `sonic --help` | Ajuda geral |
+
+### Exemplos de uso:
+
+```bash
+sonic new minha_api     # Cria functions/minha_api.js
+sonic list              # Lista todos workers
+sonic run minha_api     # Testa o worker
+sonic dev               # Desenvolvimento com auto-reload
+```
+
+---
+
+## 🗑️ Desinstalar
+
+```bash
+sudo ./uninstall.sh
+# ou
+sudo rm /usr/local/bin/sonic
+```
+
+---
+
 ## Architecture
 
 ![Sonic Architecture](assets/architecture.svg)
@@ -74,42 +172,6 @@ Client ──► Transparent Proxy (:8443)
 | **VM Pool** | 64 VMs pré-aquecidas em sync.Pool — zero cold start |
 | **eBPF Sockmap** | Kernel bypass com zero-copy TCP splicing |
 | **Single Leaf Key** | CertCache reusa mesma chave RSA para todos os certificados |
-
----
-
-## Quick Start
-
-```bash
-go install github.com/manassesbinga/sonic@latest
-
-# Initialize a project
-sonic init
-
-# Start developing (hot-reload)
-sonic dev
-
-# Test a worker directly
-sonic run hello --method POST --header "X-Test: value"
-
-# Run in production
-sonic start
-```
-
----
-
-## CLI Usage
-
-| Command | Description |
-|---------|-------------|
-| `sonic init` | Initialize a new project |
-| `sonic new <name>` | Create a new worker function |
-| `sonic start` | Start proxy in production mode |
-| `sonic dev` | Start with hot-reload |
-| `sonic run <file>` | Execute a worker directly |
-| `sonic list` | List available workers |
-| `sonic info` | Show project & system info |
-| `sonic ca install` | Generate Root CA |
-| `sonic version` | Show version |
 
 ---
 
