@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"os"
 	"time"
 )
 
@@ -61,9 +62,14 @@ func (m *MITMEngine) InterceptTermTLS(clientConn net.Conn, domain string) (*tls.
 // addr is the server address (e.g. "example.com:443").
 // domain is the SNI hostname for TLS verification.
 func (m *MITMEngine) ConnectRealServer(addr string, domain string) (*tls.Conn, error) {
+	insecure := false
+	if os.Getenv("SONIC_TEST_UPSTREAM_PORT") != "" {
+		insecure = true
+	}
+
 	tlsConfig := &tls.Config{
 		ServerName:         domain,
-		InsecureSkipVerify: false,
+		InsecureSkipVerify: insecure,
 	}
 
 	dialer := &net.Dialer{

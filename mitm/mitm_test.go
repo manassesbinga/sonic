@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 )
@@ -71,6 +72,10 @@ func TestMITMCAAndCache(t *testing.T) {
 }
 
 func TestCAKeyPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Ignorando teste de permissao de arquivo POSIX no Windows")
+	}
+
 	tempDir, err := os.MkdirTemp("", "mitm-perm-test-*")
 	if err != nil {
 		t.Fatalf("Erro ao criar diretorio temporario: %v", err)

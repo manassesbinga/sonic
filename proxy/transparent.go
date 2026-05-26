@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -109,7 +110,25 @@ func (p *TransparentProxy) handleConnection(conn net.Conn) {
 
 	bufferedConn := NewBufferedConn(conn)
 
-	peekBytes, err := bufferedConn.Peek(1024)
+	// Peek 5 bytes for the TLS record header to find the actual payload length
+	header, err := bufferedConn.Peek(5)
+	if err != nil {
+		return
+	}
+
+	if header[0] != 0x16 {
+		// Not a TLS Handshake record
+		return
+	}
+
+	// Extract TLS Handshake record length (bytes 3 and 4)
+	recordLen := int(header[3])<<8 | int(header[4])
+	if recordLen <= 0 || recordLen > 8192 {
+		return
+	}
+
+	// Peek the exact ClientHello size (record length + 5 bytes header)
+	peekBytes, err := bufferedConn.Peek(recordLen + 5)
 	if err != nil {
 		return
 	}
@@ -147,7 +166,7 @@ func (p *TransparentProxy) shouldBypass(domain string) bool {
 }
 
 func (p *TransparentProxy) runPassthrough(clientConn net.Conn, domain string) {
-	serverAddr := fmt.Sprintf("%s:443", domain)
+	serverAddr := fmt.Sprintf("%s:%s", domain, getUpstreamPort())
 	serverConn, err := net.DialTimeout("tcp", serverAddr, 5*time.Second)
 	if err != nil {
 		fmt.Printf("[PASSTHROUGH ERROR] Falha ao conectar ao servidor real %s: %v\n", serverAddr, err)
@@ -184,7 +203,7 @@ func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
 		return
 	}
 
-	serverTLSConn, err := p.mitmEngine.ConnectRealServer(domain+":443", domain)
+	serverTLSConn, err := p.mitmEngine.ConnectRealServer(domain+":"+getUpstreamPort(), domain)
 	if err != nil {
 		fmt.Printf("[MITM ERROR] Falha ao re-encriptar conexao com o servidor real %s: %v\n", domain, err)
 		return
@@ -311,4 +330,11 @@ func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
 			return
 		}
 	}
+}
+
+func getUpstreamPort() string {
+	if port := os.Getenv("SONIC_TEST_UPSTREAM_PORT"); port != "" {
+		return port
+	}
+	return "443"
 }
