@@ -1,0 +1,6 @@
+============================================
+ Sonic Comprehensive Test Suite
+ Started: Mon May 25 21:16:56 CEST 2026
+============================================
+
+[1/6] Running Unit Tests...

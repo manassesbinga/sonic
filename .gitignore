@@ -20,9 +20,6 @@ dist/
 build/
 release/
 
-# Test results
-tests/results/
-
 # IDE
 .idea/
 .vscode/

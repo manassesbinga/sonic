@@ -1,0 +1,36 @@
+=== RUN   TestIntegration_JSExecution
+--- PASS: TestIntegration_JSExecution (0.02s)
+=== RUN   TestIntegration_JSBlockWAF
+--- PASS: TestIntegration_JSBlockWAF (0.00s)
+=== RUN   TestIntegration_FailsafeBypass
+--- PASS: TestIntegration_FailsafeBypass (0.00s)
+=== RUN   TestIntegration_ConcurrentWorkers
+--- PASS: TestIntegration_ConcurrentWorkers (0.26s)
+=== RUN   TestIntegration_TimeoutRecovery
+--- PASS: TestIntegration_TimeoutRecovery (0.11s)
+=== RUN   TestIntegration_CPUPoolWarmup
+    all_test.go:285: pool=1 warmup=8.761692ms exec10=7.133763ms
+    all_test.go:285: pool=4 warmup=20.935751ms exec10=10.629588ms
+    all_test.go:285: pool=16 warmup=163.307549ms exec10=13.518857ms
+    all_test.go:285: pool=64 warmup=332.523898ms exec10=841.575µs
+--- PASS: TestIntegration_CPUPoolWarmup (0.56s)
+=== RUN   TestIntegration_MITMEngine
+--- PASS: TestIntegration_MITMEngine (0.43s)
+=== RUN   TestIntegration_CertCache
+--- PASS: TestIntegration_CertCache (0.49s)
+=== RUN   TestIntegration_SNIParser
+=== RUN   TestIntegration_SNIParser/valid_sni
+=== RUN   TestIntegration_SNIParser/long_domain
+=== RUN   TestIntegration_SNIParser/ip_address
+=== RUN   TestIntegration_SNIParser/empty_data
+=== RUN   TestIntegration_SNIParser/not_tls
+--- PASS: TestIntegration_SNIParser (0.00s)
+    --- PASS: TestIntegration_SNIParser/valid_sni (0.00s)
+    --- PASS: TestIntegration_SNIParser/long_domain (0.00s)
+    --- PASS: TestIntegration_SNIParser/ip_address (0.00s)
+    --- PASS: TestIntegration_SNIParser/empty_data (0.00s)
+    --- PASS: TestIntegration_SNIParser/not_tls (0.00s)
+=== RUN   TestIntegration_ShouldBypass
+--- PASS: TestIntegration_ShouldBypass (0.00s)
+PASS
+ok  	channelworkers/tests	2.331s

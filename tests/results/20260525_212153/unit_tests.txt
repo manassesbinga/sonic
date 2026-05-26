@@ -1,0 +1,198 @@
+?   	channelworkers	[no test files]
+?   	channelworkers/cli	[no test files]
+=== RUN   TestLoadConfigDefault
+--- PASS: TestLoadConfigDefault (0.00s)
+=== RUN   TestConfigValidation
+=== RUN   TestConfigValidation/Porta_Valida
+=== RUN   TestConfigValidation/Porta_Invalida_Negativa
+=== RUN   TestConfigValidation/Porta_Invalida_Superior
+=== RUN   TestConfigValidation/Modo_Invalido
+=== RUN   TestConfigValidation/Failsafe_Invalido
+--- PASS: TestConfigValidation (0.00s)
+    --- PASS: TestConfigValidation/Porta_Valida (0.00s)
+    --- PASS: TestConfigValidation/Porta_Invalida_Negativa (0.00s)
+    --- PASS: TestConfigValidation/Porta_Invalida_Superior (0.00s)
+    --- PASS: TestConfigValidation/Modo_Invalido (0.00s)
+    --- PASS: TestConfigValidation/Failsafe_Invalido (0.00s)
+=== RUN   TestCreateDefaultConfigFile
+--- PASS: TestCreateDefaultConfigFile (0.00s)
+PASS
+ok  	channelworkers/config	0.021s
+?   	channelworkers/ebpf	[no test files]
+=== RUN   TestMITMCAAndCache
+--- PASS: TestMITMCAAndCache (0.59s)
+=== RUN   TestCAKeyPermissions
+    mitm_test.go:95: Permissoes ca-key.pem: 0600
+--- PASS: TestCAKeyPermissions (0.26s)
+=== RUN   TestCertCache_ConcurrentDifferentDomains
+--- PASS: TestCertCache_ConcurrentDifferentDomains (1.08s)
+=== RUN   TestCertCache_IPDomain
+--- PASS: TestCertCache_IPDomain (1.18s)
+=== RUN   TestMITMEngine_ConnectRealServerValidatesTLS
+--- PASS: TestMITMEngine_ConnectRealServerValidatesTLS (1.24s)
+=== RUN   TestCertCache_DoubleCheckLocking
+--- PASS: TestCertCache_DoubleCheckLocking (1.05s)
+=== RUN   TestCertCache_DifferentDomainsUnique
+--- PASS: TestCertCache_DifferentDomainsUnique (1.01s)
+=== RUN   TestMITMEngine_InterceptTermTLSHandshakeTimeout
+--- PASS: TestMITMEngine_InterceptTermTLSHandshakeTimeout (0.64s)
+PASS
+ok  	channelworkers/mitm	7.062s
+=== RUN   TestExtractSNI_Valid
+--- PASS: TestExtractSNI_Valid (0.00s)
+=== RUN   TestExtractSNI_LongDomain
+--- PASS: TestExtractSNI_LongDomain (0.00s)
+=== RUN   TestExtractSNI_IPAddress
+--- PASS: TestExtractSNI_IPAddress (0.00s)
+=== RUN   TestExtractSNI_NotTLS
+--- PASS: TestExtractSNI_NotTLS (0.00s)
+=== RUN   TestExtractSNI_NotClientHello
+--- PASS: TestExtractSNI_NotClientHello (0.00s)
+=== RUN   TestExtractSNI_TruncatedHeader
+--- PASS: TestExtractSNI_TruncatedHeader (0.00s)
+=== RUN   TestExtractSNI_TruncatedRecord
+--- PASS: TestExtractSNI_TruncatedRecord (0.00s)
+=== RUN   TestExtractSNI_NoExtensions
+--- PASS: TestExtractSNI_NoExtensions (0.00s)
+=== RUN   TestExtractSNI_NoSNI
+--- PASS: TestExtractSNI_NoSNI (0.00s)
+=== RUN   TestExtractSNI_BufferOverflowSessionID
+--- PASS: TestExtractSNI_BufferOverflowSessionID (0.00s)
+=== RUN   TestExtractSNI_BufferOverflowCipherSuites
+--- PASS: TestExtractSNI_BufferOverflowCipherSuites (0.00s)
+=== RUN   TestExtractSNI_MalformedSNIExtLength
+--- PASS: TestExtractSNI_MalformedSNIExtLength (0.00s)
+=== RUN   TestExtractSNI_LargeSNIData
+--- PASS: TestExtractSNI_LargeSNIData (0.00s)
+=== RUN   TestExtractSNI_DomainWithLeadingDot
+--- PASS: TestExtractSNI_DomainWithLeadingDot (0.00s)
+=== RUN   TestExtractSNI_ServerNameNotFirst
+--- PASS: TestExtractSNI_ServerNameNotFirst (0.00s)
+=== RUN   TestExtractSNI_TruncatedMidExtension
+--- PASS: TestExtractSNI_TruncatedMidExtension (0.00s)
+=== RUN   TestExtractSNI_EmptyRecord
+--- PASS: TestExtractSNI_EmptyRecord (0.00s)
+=== RUN   TestExtractSNI_MinimalValid
+--- PASS: TestExtractSNI_MinimalValid (0.00s)
+=== RUN   TestShouldBypass_ExactMatch
+--- PASS: TestShouldBypass_ExactMatch (0.00s)
+=== RUN   TestShouldBypass_WildcardMatch
+--- PASS: TestShouldBypass_WildcardMatch (0.00s)
+=== RUN   TestShouldBypass_WildcardNoMatch
+--- PASS: TestShouldBypass_WildcardNoMatch (0.00s)
+=== RUN   TestShouldBypass_PassthroughAll
+--- PASS: TestShouldBypass_PassthroughAll (0.00s)
+=== RUN   TestShouldBypass_NoMatch
+--- PASS: TestShouldBypass_NoMatch (0.00s)
+=== RUN   TestShouldBypass_EmptyList
+--- PASS: TestShouldBypass_EmptyList (0.00s)
+=== RUN   TestShouldBypass_MultipleWildcards
+--- PASS: TestShouldBypass_MultipleWildcards (0.00s)
+=== RUN   TestBufferedConn_PeekAndRead
+--- PASS: TestBufferedConn_PeekAndRead (0.00s)
+=== RUN   TestBufferedConn_PeekShort
+--- PASS: TestBufferedConn_PeekShort (0.00s)
+PASS
+ok  	channelworkers/proxy	0.025s
+=== RUN   TestJSEngineNormalExecution
+--- PASS: TestJSEngineNormalExecution (0.01s)
+=== RUN   TestJSEngineCPUWatchdog
+--- PASS: TestJSEngineCPUWatchdog (0.02s)
+=== RUN   TestJSEngineConcurrency
+--- PASS: TestJSEngineConcurrency (0.08s)
+=== RUN   TestJSEngineCloudflareWorkersCompatibility
+--- PASS: TestJSEngineCloudflareWorkersCompatibility (0.01s)
+=== RUN   TestJWTVerify_WeaknessMock
+--- PASS: TestJWTVerify_WeaknessMock (0.01s)
+=== RUN   TestRunOnTraffic_PanicRecovery
+--- PASS: TestRunOnTraffic_PanicRecovery (0.01s)
+=== RUN   TestRunOnTraffic_ReturnNull
+--- PASS: TestRunOnTraffic_ReturnNull (0.01s)
+=== RUN   TestRunOnTraffic_ReturnUndefined
+--- PASS: TestRunOnTraffic_ReturnUndefined (0.02s)
+=== RUN   TestRunOnTraffic_MultipleTimeouts
+--- PASS: TestRunOnTraffic_MultipleTimeouts (0.16s)
+=== RUN   TestRunOnResponse_PanicRecovery
+--- PASS: TestRunOnResponse_PanicRecovery (0.01s)
+=== RUN   TestJSEngine_NoFunctions
+--- PASS: TestJSEngine_NoFunctions (0.00s)
+=== RUN   TestJSEngine_PoolReplacementAfterTimeout
+--- PASS: TestJSEngine_PoolReplacementAfterTimeout (0.05s)
+PASS
+ok  	channelworkers/runtime	0.428s
+?   	channelworkers/sdk	[no test files]
+=== RUN   TestIntegration_JSExecution
+--- PASS: TestIntegration_JSExecution (0.01s)
+=== RUN   TestIntegration_JSBlockWAF
+--- PASS: TestIntegration_JSBlockWAF (0.00s)
+=== RUN   TestIntegration_FailsafeBypass
+--- PASS: TestIntegration_FailsafeBypass (0.00s)
+=== RUN   TestIntegration_ConcurrentWorkers
+--- PASS: TestIntegration_ConcurrentWorkers (0.09s)
+=== RUN   TestIntegration_TimeoutRecovery
+--- PASS: TestIntegration_TimeoutRecovery (0.03s)
+=== RUN   TestIntegration_CPUPoolWarmup
+    all_test.go:285: pool=1 warmup=1.549285ms exec10=1.640565ms
+    all_test.go:285: pool=4 warmup=3.125859ms exec10=1.122284ms
+    all_test.go:285: pool=16 warmup=44.767164ms exec10=1.909378ms
+    all_test.go:285: pool=64 warmup=109.269288ms exec10=3.554744ms
+--- PASS: TestIntegration_CPUPoolWarmup (0.17s)
+=== RUN   TestIntegration_MITMEngine
+--- PASS: TestIntegration_MITMEngine (0.77s)
+=== RUN   TestIntegration_CertCache
+--- PASS: TestIntegration_CertCache (0.09s)
+=== RUN   TestIntegration_SNIParser
+=== RUN   TestIntegration_SNIParser/valid_sni
+=== RUN   TestIntegration_SNIParser/long_domain
+=== RUN   TestIntegration_SNIParser/ip_address
+=== RUN   TestIntegration_SNIParser/empty_data
+=== RUN   TestIntegration_SNIParser/not_tls
+--- PASS: TestIntegration_SNIParser (0.00s)
+    --- PASS: TestIntegration_SNIParser/valid_sni (0.00s)
+    --- PASS: TestIntegration_SNIParser/long_domain (0.00s)
+    --- PASS: TestIntegration_SNIParser/ip_address (0.00s)
+    --- PASS: TestIntegration_SNIParser/empty_data (0.00s)
+    --- PASS: TestIntegration_SNIParser/not_tls (0.00s)
+=== RUN   TestIntegration_ShouldBypass
+--- PASS: TestIntegration_ShouldBypass (0.00s)
+=== RUN   TestCompatibility_HeadersAPI
+--- PASS: TestCompatibility_HeadersAPI (0.02s)
+=== RUN   TestCompatibility_RequestClass
+--- PASS: TestCompatibility_RequestClass (0.01s)
+=== RUN   TestCompatibility_ResponseClass
+--- PASS: TestCompatibility_ResponseClass (0.01s)
+=== RUN   TestCompatibility_FetchPolyfill
+--- PASS: TestCompatibility_FetchPolyfill (0.00s)
+=== RUN   TestCompatibility_LogBridge
+[JS LOG] test log message
+--- PASS: TestCompatibility_LogBridge (0.00s)
+=== RUN   TestCompatibility_NullUndefined
+--- PASS: TestCompatibility_NullUndefined (0.00s)
+=== RUN   TestCompatibility_NoFunctions
+--- PASS: TestCompatibility_NoFunctions (0.00s)
+=== RUN   TestStress_HighConcurrency
+    all_test.go:663: 200 concurrent requests: 0 errors
+--- PASS: TestStress_HighConcurrency (0.15s)
+=== RUN   TestStress_LargePayload
+    all_test.go:701: payload 0 bytes: 280.205µs (0.00 MB/s)
+    all_test.go:701: payload 100 bytes: 105.678µs (0.90 MB/s)
+    all_test.go:701: payload 10000 bytes: 217.137µs (43.92 MB/s)
+    all_test.go:701: payload 100000 bytes: 1.089883ms (87.50 MB/s)
+    all_test.go:701: payload 500000 bytes: 3.253178ms (146.58 MB/s)
+--- PASS: TestStress_LargePayload (0.01s)
+=== RUN   TestStress_RapidPoolRecycle
+    all_test.go:732: processed 11019 requests in 2.00033803s (5509 req/s)
+--- PASS: TestStress_RapidPoolRecycle (2.02s)
+=== RUN   TestStress_SNIParserEdgeCases
+--- PASS: TestStress_SNIParserEdgeCases (0.00s)
+=== RUN   TestStress_CertCacheConcurrent
+    all_test.go:793: 1000 concurrent cert generations: 0 errors
+--- PASS: TestStress_CertCacheConcurrent (4.61s)
+=== RUN   TestStress_MaxHeaders
+    all_test.go:829: headers count, input=100 output=2
+--- PASS: TestStress_MaxHeaders (0.00s)
+=== RUN   TestBenchmark_JSSimple
+    all_test.go:852: Simple JS: 1000 iterations in 109.742275ms = 9112 req/s (avg 109.742µs/req)
+--- PASS: TestBenchmark_JSSimple (0.17s)
+PASS
+ok  	channelworkers/tests	8.252s

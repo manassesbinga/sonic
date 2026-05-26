@@ -1,0 +1,23 @@
+=== RUN   TestStress_HighConcurrency
+    all_test.go:663: 200 concurrent requests: 0 errors
+--- PASS: TestStress_HighConcurrency (0.57s)
+=== RUN   TestStress_LargePayload
+    all_test.go:701: payload 0 bytes: 3.656744ms (0.00 MB/s)
+    all_test.go:701: payload 100 bytes: 102.883µs (0.93 MB/s)
+    all_test.go:701: payload 10000 bytes: 99.165µs (96.17 MB/s)
+    all_test.go:701: payload 100000 bytes: 331.902µs (287.34 MB/s)
+    all_test.go:701: payload 500000 bytes: 9.736956ms (48.97 MB/s)
+--- PASS: TestStress_LargePayload (0.02s)
+=== RUN   TestStress_RapidPoolRecycle
+    all_test.go:732: processed 7008 requests in 2.000053753s (3504 req/s)
+--- PASS: TestStress_RapidPoolRecycle (2.21s)
+=== RUN   TestStress_SNIParserEdgeCases
+--- PASS: TestStress_SNIParserEdgeCases (0.00s)
+=== RUN   TestStress_CertCacheConcurrent
+    all_test.go:793: 1000 concurrent cert generations: 0 errors
+--- PASS: TestStress_CertCacheConcurrent (4.59s)
+=== RUN   TestStress_MaxHeaders
+    all_test.go:829: headers count, input=100 output=2
+--- PASS: TestStress_MaxHeaders (0.01s)
+PASS
+ok  	channelworkers/tests	7.482s
