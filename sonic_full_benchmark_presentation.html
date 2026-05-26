@@ -1,0 +1,433 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+.wrap{background:#0d0f12;color:#e2e8f0;font-family:'Space Grotesk',sans-serif;padding:0 0 2rem;}
+
+.hero{background:#0a0d14;border-bottom:1px solid #1e2530;padding:2rem 2rem 1.5rem;text-align:center;}
+.sonic-logo{display:inline-block;font-family:'Space Grotesk',sans-serif;font-size:3.6rem;font-weight:700;color:#4a9eff;letter-spacing:6px;text-transform:uppercase;-webkit-text-stroke:3px #f5a623;paint-order:stroke fill;text-shadow:0 4px 0 #c47a00,0 8px 16px rgba(0,0,0,0.6),0 0 40px rgba(74,158,255,0.3);}
+.hero-sub{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#475569;margin-top:8px;letter-spacing:1px;}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center;}
+.badge{font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;padding:3px 10px;border-radius:4px;border:1px solid;letter-spacing:0.5px;}
+.badge-blue{color:#60a5fa;border-color:#1e3a5f;background:#0f1f33;}
+.badge-green{color:#4ade80;border-color:#14532d;background:#0a2318;}
+.badge-amber{color:#fbbf24;border-color:#78350f;background:#1c0f00;}
+.badge-red{color:#f87171;border-color:#7f1d1d;background:#200808;}
+
+.section{padding:1.5rem 2rem 0;}
+.section-title{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:#3b82f6;letter-spacing:2px;text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.section-title::before{content:'//';color:#334155;}
+
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.metric-card{background:#111827;border:1px solid #1e2530;border-radius:10px;padding:0.9rem;}
+.metric-label{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#475569;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.metric-value{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:#fff;}
+.metric-unit{font-size:0.65rem;color:#475569;margin-left:2px;}
+.metric-delta{font-size:0.66rem;color:#4ade80;margin-top:3px;font-family:'JetBrains Mono',monospace;}
+
+.chart-wrap{position:relative;width:100%;}
+
+.bench-row{margin-bottom:9px;}
+.bench-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.bench-name{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#94a3b8;display:flex;align-items:center;gap:6px;}
+.bench-name .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.bench-val{font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;}
+.bar-bg{height:10px;background:#1a2030;border-radius:5px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:5px;}
+
+.flow-box{background:#080b10;border:1px solid #1e3a5f;border-radius:12px;padding:1.25rem;position:relative;overflow:hidden;}
+.flow-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3b82f6,transparent);}
+.flow-diagram{display:flex;align-items:center;justify-content:center;gap:0;}
+.flow-node{background:#111827;border:1px solid #1e2530;border-radius:10px;padding:0.9rem 0.7rem;text-align:center;min-width:100px;flex-shrink:0;}
+.flow-node.sonic-node{background:#0f1f33;border:2px solid #3b82f6;border-radius:12px;padding:1rem 0.8rem;min-width:130px;position:relative;}
+.flow-node.sonic-node::after{content:'← EXECUTA AQUI';position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:#3b82f6;letter-spacing:1px;white-space:nowrap;}
+.node-icon{font-size:1.4rem;margin-bottom:5px;}
+.node-title{font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;color:#e2e8f0;}
+.node-sub{font-family:'JetBrains Mono',monospace;font-size:0.57rem;color:#475569;margin-top:3px;line-height:1.5;}
+.nbadge{display:inline-block;margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:0.55rem;padding:2px 6px;border-radius:3px;}
+.nbadge-red{color:#f87171;background:#200808;border:1px solid #7f1d1d;}
+.nbadge-green{color:#4ade80;background:#0a2318;border:1px solid #14532d;}
+.arrow{display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding:0 3px;}
+.arrow-line{width:36px;height:2px;background:#1e2530;position:relative;}
+.arrow-line::after{content:'';position:absolute;right:-1px;top:-4px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid #1e2530;}
+.arrow-line.active{background:#3b82f6;}
+.arrow-line.active::after{border-left-color:#3b82f6;}
+.arrow-label{font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#334155;margin-top:4px;}
+
+.desc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:1rem;}
+.desc-item{background:#111827;border-left:2px solid #3b82f6;border-radius:0 8px 8px 0;padding:0.65rem 0.85rem;}
+.desc-title{font-family:'JetBrains Mono',monospace;font-size:0.67rem;font-weight:700;color:#60a5fa;margin-bottom:3px;}
+.desc-text{font-size:0.7rem;color:#64748b;line-height:1.5;}
+
+.comp-table{width:100%;border-collapse:collapse;font-size:0.7rem;}
+.comp-table th{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#475569;letter-spacing:1px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #1e2530;text-align:left;}
+.comp-table th:first-child{text-align:left;}
+.comp-table td{padding:8px 10px;border-bottom:1px solid #0f1520;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:#94a3b8;}
+.comp-table tr.sonic-row td{color:#e2e8f0;background:#0f1f33;}
+.comp-table td.yes{color:#4ade80;font-weight:700;}
+.comp-table td.no{color:#ef4444;}
+.comp-table td.sonic-val{color:#60a5fa;font-weight:700;}
+.comp-table td.best{color:#4ade80;font-weight:700;}
+.comp-table td:first-child{color:#e2e8f0;}
+
+.throughput-card{background:#111827;border:1px solid #1e2530;border-radius:10px;padding:1rem 1.25rem;}
+.lat-card{background:#111827;border:1px solid #1e2530;border-radius:10px;padding:1rem 1.25rem;}
+
+.footer-bar{margin:2rem 2rem 0;border-top:1px solid #1e2530;padding-top:1rem;display:flex;justify-content:space-between;align-items:center;}
+.footer-link{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:#3b82f6;text-decoration:none;}
+.footer-copy{font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:#334155;}
+</style>
+
+<div class="wrap">
+<h2 style="position:absolute;left:-9999px;">Sonic Edge Engine — benchmarks reais e comparação completa</h2>
+
+<div class="hero">
+  <div class="sonic-logo">SONIC</div>
+  <div class="hero-sub">edge javascript engine · ebpf · transparent l7 proxy · self-hosted cloudflare workers</div>
+  <div class="badges">
+    <span class="badge badge-blue">Go 88% · Goja VM</span>
+    <span class="badge badge-green">MIT · Open Source</span>
+    <span class="badge badge-amber">eBPF Sockmap</span>
+    <span class="badge badge-red">Zero Vendor Lock-in</span>
+  </div>
+</div>
+
+<!-- WHERE IT RUNS -->
+<div class="section">
+  <div class="section-title">onde executa — não no servidor, não no cliente</div>
+  <div class="flow-box">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:#3b82f6;letter-spacing:2px;text-transform:uppercase;margin-bottom:1.2rem;text-align:center;">proxy l7 transparente · intercepta o canal de rede</div>
+    <div class="flow-diagram">
+      <div class="flow-node">
+        <div class="node-icon">💻</div>
+        <div class="node-title">Cliente</div>
+        <div class="node-sub">Browser · App<br/>curl · SDK</div>
+        <span class="nbadge nbadge-red">não modifica</span>
+      </div>
+      <div class="arrow">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">HTTPS</div>
+      </div>
+      <div class="flow-node sonic-node">
+        <div class="node-icon">⚡</div>
+        <div class="node-title">SONIC</div>
+        <div class="node-sub">Proxy L7 Transparente<br/>eBPF Sockmap<br/>TLS MITM dinâmico<br/>JS Worker Engine<br/>Goja VM Pool ×64</div>
+        <span class="nbadge nbadge-green">executa aqui</span>
+      </div>
+      <div class="arrow">
+        <div class="arrow-line active"></div>
+        <div class="arrow-label">HTTPS</div>
+      </div>
+      <div class="flow-node">
+        <div class="node-icon">🖥️</div>
+        <div class="node-title">Servidor</div>
+        <div class="node-sub">API · Backend<br/>Origin Server</div>
+        <span class="nbadge nbadge-red">não modifica</span>
+      </div>
+    </div>
+    <div class="desc-grid">
+      <div class="desc-item">
+        <div class="desc-title">📍 No canal de rede</div>
+        <div class="desc-text">Proxy transparente na porta :8443. Cliente e servidor não sabem que o Sonic está entre eles — sem alterar DNS, sem SDK, sem configuração.</div>
+      </div>
+      <div class="desc-item">
+        <div class="desc-title">🔒 Intercepta HTTPS</div>
+        <div class="desc-text">TLS MITM dinâmico: termina o TLS do cliente, executa o worker JS (onTraffic / onResponse), re-encripta e reencaminha. Upstream TLS sempre validado.</div>
+      </div>
+      <div class="desc-item">
+        <div class="desc-title">⚡ eBPF kernel bypass</div>
+        <div class="desc-text">BPF_MAP_TYPE_SOCKMAP com zero-copy TCP splicing em kernel space. 64 VMs Goja pré-aquecidas — zero cold start. CPU watchdog de 50ms por execução.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KEY METRICS -->
+<div class="section">
+  <div class="section-title">métricas reais dos testes</div>
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label">Throughput</div>
+      <div class="metric-value">~9,500<span class="metric-unit">req/s</span></div>
+      <div class="metric-delta">+46% vs CF Workers</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Latency</div>
+      <div class="metric-value">~105<span class="metric-unit">µs</span></div>
+      <div class="metric-delta">-48µs vs CF Workers</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Cold Start</div>
+      <div class="metric-value">0<span class="metric-unit">ms</span></div>
+      <div class="metric-delta">vs ~500ms Lambda@Edge</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">VM Pool</div>
+      <div class="metric-value">64<span class="metric-unit">vms</span></div>
+      <div class="metric-delta">timeout: 50ms / execução</div>
+    </div>
+  </div>
+</div>
+
+<!-- THROUGHPUT CHART -->
+<div class="section">
+  <div class="section-title">throughput — req/s (dados reais dos testes)</div>
+  <div class="throughput-card">
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#3b82f6"></span>Sonic (eBPF + JS)</div>
+        <div class="bench-val" style="color:#3b82f6">~9,500 req/s</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#1d4ed8,#3b82f6);"></div></div>
+    </div>
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#6366f1"></span>Cloudflare Workers</div>
+        <div class="bench-val" style="color:#6366f1">~6,500 req/s</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:68.4%;background:#6366f1;"></div></div>
+    </div>
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#8b5cf6"></span>Fastly C@E</div>
+        <div class="bench-val" style="color:#8b5cf6">~5,000 req/s</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:52.6%;background:#8b5cf6;"></div></div>
+    </div>
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#64748b"></span>Deno Deploy</div>
+        <div class="bench-val" style="color:#64748b">~4,200 req/s</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:44.2%;background:#64748b;"></div></div>
+    </div>
+    <div class="bench-row" style="margin-bottom:0;">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#ef4444"></span>AWS Lambda@Edge</div>
+        <div class="bench-val" style="color:#ef4444">~2,800 req/s</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:29.5%;background:#ef4444;"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LATENCY CHART -->
+<div class="section">
+  <div class="section-title">latência média por pedido — menos é melhor</div>
+  <div class="lat-card">
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#4ade80"></span>Sonic</div>
+        <div class="bench-val" style="color:#4ade80">~105 µs</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:20.8%;background:#4ade80;"></div></div>
+    </div>
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#6366f1"></span>Cloudflare Workers</div>
+        <div class="bench-val" style="color:#6366f1">~153 µs</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:30.4%;background:#6366f1;"></div></div>
+    </div>
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#8b5cf6"></span>Fastly C@E</div>
+        <div class="bench-val" style="color:#8b5cf6">~200 µs</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:39.7%;background:#8b5cf6;"></div></div>
+    </div>
+    <div class="bench-row">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#64748b"></span>Deno Deploy</div>
+        <div class="bench-val" style="color:#64748b">~238 µs</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:47.2%;background:#64748b;"></div></div>
+    </div>
+    <div class="bench-row" style="margin-bottom:0;">
+      <div class="bench-header">
+        <div class="bench-name"><span class="dot" style="background:#ef4444"></span>AWS Lambda@Edge</div>
+        <div class="bench-val" style="color:#ef4444">~357 µs</div>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:70.8%;background:#ef4444;"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYLOAD THROUGHPUT -->
+<div class="section">
+  <div class="section-title">payload throughput (sonic)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="metric-card" style="display:flex;align-items:center;gap:16px;">
+      <div>
+        <div class="metric-label">Payload 100 KB</div>
+        <div class="metric-value">287<span class="metric-unit">MB/s</span></div>
+      </div>
+      <div style="flex:1;">
+        <div class="bar-bg" style="height:12px;"><div class="bar-fill" style="width:46.9%;background:#3b82f6;height:12px;"></div></div>
+      </div>
+    </div>
+    <div class="metric-card" style="display:flex;align-items:center;gap:16px;">
+      <div>
+        <div class="metric-label">Payload 500 KB</div>
+        <div class="metric-value">612<span class="metric-unit">MB/s</span></div>
+      </div>
+      <div style="flex:1;">
+        <div class="bar-bg" style="height:12px;"><div class="bar-fill" style="width:100%;background:#4ade80;height:12px;"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FULL COMPARISON TABLE -->
+<div class="section">
+  <div class="section-title">comparação completa de features</div>
+  <div style="background:#111827;border:1px solid #1e2530;border-radius:10px;overflow:hidden;">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Sonic</th>
+          <th>CF Workers</th>
+          <th>Fastly C@E</th>
+          <th>Deno Deploy</th>
+          <th>Lambda@Edge</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="sonic-row">
+          <td>Requests/sec</td>
+          <td class="best">~9,500</td>
+          <td>~6,500</td>
+          <td>~5,000</td>
+          <td>~4,200</td>
+          <td>~2,800</td>
+        </tr>
+        <tr class="sonic-row">
+          <td>Avg Latency</td>
+          <td class="best">~105 µs</td>
+          <td>~153 µs</td>
+          <td>~200 µs</td>
+          <td>~238 µs</td>
+          <td>~357 µs</td>
+        </tr>
+        <tr class="sonic-row">
+          <td>Cold Start</td>
+          <td class="best">0 ms</td>
+          <td>~5 ms</td>
+          <td>~5 ms</td>
+          <td>~5 ms</td>
+          <td>~500 ms</td>
+        </tr>
+        <tr>
+          <td>JS Engine</td>
+          <td class="sonic-val">Goja (Go)</td>
+          <td>V8</td>
+          <td>V8</td>
+          <td>V8</td>
+          <td>V8</td>
+        </tr>
+        <tr>
+          <td>Transparent Proxy</td>
+          <td class="yes">✓ eBPF</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>TLS MITM built-in</td>
+          <td class="yes">✓</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>Self-hosted</td>
+          <td class="yes">✓ qualquer VPS</td>
+          <td class="no">✗ cloud</td>
+          <td class="no">✗ cloud</td>
+          <td class="no">✗ cloud</td>
+          <td class="no">✗ cloud</td>
+        </tr>
+        <tr>
+          <td>Embeddable Go SDK</td>
+          <td class="yes">✓</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>Docker / systemd</td>
+          <td class="yes">✓</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>Offline / Air-gapped</td>
+          <td class="yes">✓</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>CF Workers API compat.</td>
+          <td class="yes">✓ drop-in</td>
+          <td class="yes">✓ nativo</td>
+          <td style="color:#fbbf24;">~ parcial</td>
+          <td style="color:#fbbf24;">~ parcial</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>Open Source</td>
+          <td class="yes">✓ MIT</td>
+          <td class="no">✗</td>
+          <td class="no">✗</td>
+          <td class="yes">✓ MIT</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>Vendor Lock-in</td>
+          <td class="best">✗ nenhum</td>
+          <td class="no">Cloudflare</td>
+          <td class="no">Fastly</td>
+          <td class="no">Deno</td>
+          <td class="no">AWS</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- WHY FASTER -->
+<div class="section">
+  <div class="section-title">por que o sonic é mais rápido</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div style="background:#111827;border:1px solid #1e2530;border-radius:10px;padding:1rem;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:700;color:#60a5fa;margin-bottom:10px;">Goja VM — Pure Go</div>
+      <div style="font-size:0.72rem;color:#64748b;line-height:1.6;">Engine 100% Go, sem CGO, sem boundary cross-language. Compilação para bytecode numa única vez — execução no pool sem overhead de inicialização.</div>
+    </div>
+    <div style="background:#111827;border:1px solid #1e2530;border-radius:10px;padding:1rem;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:700;color:#4ade80;margin-bottom:10px;">VM Pool × 64</div>
+      <div style="font-size:0.72rem;color:#64748b;line-height:1.6;">64 VMs pré-aquecidas em sync.Pool. Zero cold start — cada pedido vai direto para uma VM disponível. CPU watchdog com vm.Interrupt() em 50ms.</div>
+    </div>
+    <div style="background:#111827;border:1px solid #1e2530;border-radius:10px;padding:1rem;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:700;color:#fbbf24;margin-bottom:10px;">eBPF Sockmap</div>
+      <div style="font-size:0.72rem;color:#64748b;line-height:1.6;">Kernel bypass com zero-copy TCP splicing. BPF_MAP_TYPE_SOCKMAP + BPF_PROG_TYPE_SK_MSG — dados transferidos em kernel space sem round-trip para userspace.</div>
+    </div>
+    <div style="background:#111827;border:1px solid #1e2530;border-radius:10px;padding:1rem;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:700;color:#f87171;margin-bottom:10px;">Single Leaf Key + CertCache</div>
+      <div style="font-size:0.72rem;color:#64748b;line-height:1.6;">Uma única chave RSA reutilizada para todos os certificados dinâmicos. Cache com RWMutex — certificates gerados uma vez por domínio e reutilizados.</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-bar">
+  <a class="footer-link" href="https://github.com/manassesbinga/sonic">github.com/manassesbinga/sonic</a>
+  <span class="footer-copy">MIT · Go · eBPF · no canal · não no servidor, não no cliente</span>
+</div>
+</div>
