@@ -14,6 +14,8 @@
   ✓ Drop-in: seu código CF Workers roda sem modificação
 ```
 
+
+
 ---
 
 ## ⚡ Instalação Rápida (2 comandos)
@@ -116,7 +118,7 @@ sudo rm /usr/local/bin/sonic
 
 ## Architecture
 
-![Sonic Architecture](assets/architecture.svg)
+![Sonic Architecture](assets/diagrama.png)
 
 ### Request Flow
 
@@ -158,7 +160,7 @@ Client ──► Transparent Proxy (:8443)
 
 ## Performance & Efficiency
 
-![Sonic Efficiency](assets/efficiency.svg)
+![Sonic Efficiency](assets/fluxo.png)
 
 | Benchmark | Sonic | Cloudflare Workers | Fastly C@E | Deno Deploy | Lambda@Edge |
 |-----------|-------|-------------------|------------|-------------|-------------|
@@ -505,11 +507,6 @@ make docker-run  # Run via Docker Compose
 - Hot-reload without restart
 
 ---
-
-![Sonic Comparison](assets/diagrama.png)
-
-![Sonic Comparison](assets/fluxo.png)
-
 ---
 
 ## License
