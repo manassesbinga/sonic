@@ -1,71 +1,69 @@
+
 # Sonic — Multi-Language, Multi-Protocol Edge Engine
 
 ![Sonic Presentation](assets/logo.png)
 
-**Sonic** é uma **plataforma de execução de lógica sobre qualquer dado que viaja na rede**. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatível com a **API do Cloudflare Workers** — execute seus workers localmente, na borda da rede, sem vendor lock-in.
+**Sonic** is a **platform for running logic over any network data**. Transparent L7 proxy, eBPF-accelerated, with support for multiple languages (JavaScript, WebAssembly) and protocols (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatible with **Cloudflare Workers API** — run your workers locally, at the network edge, without vendor lock-in.
 
 ## 🔮 The Vision
 
-O Sonic se transforma de "mais um proxy JS" para uma **plataforma de execução de lógica sobre QUALQUER dado da rede**, com três pilares fundamentais:
+Sonic transforms from "just another JS proxy" to a **platform for running logic over ANY network data**, with three fundamental pillars:
 
-1. **Qualquer canal**: Protocolo-agnóstico (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC)
-2. **Qualquer linguagem**: JavaScript (Goja), WebAssembly (Rust, Go, C), nativos via stdin/stdout
-3. **Estado partilhado**: KV Store persistente (bbolt) para todos os workers, independentemente de linguagem/protocolo
+1. **Any channel**: Protocol-agnostic (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC)
+2. **Any language**: JavaScript (Goja), WebAssembly (Rust, Go, C), native via stdin/stdout
+3. **Shared state**: Persistent KV Store (bbolt) for all workers, regardless of language/protocol
 
 ![ Presentation](assets/comparacao.png)
 
 ```
   ⚡ Sonic — Self-hosted Cloudflare Workers alternative
-  ✓ Sem vendor lock-in
+  ✓ No vendor lock-in
   ✓ Deploy anywhere: VPS, Raspberry Pi, Docker, bare metal
   ✓ eBPF-accelerated kernel bypass (Linux)
-  ✓ Drop-in: seu código CF Workers roda sem modificação
+  ✓ Drop-in: your CF Workers code runs without modification
 ```
-
-
-
-
 
 ![tation](assets/teste.png)
----
-
-## ⚡ Instalação Rápida
 
 ---
 
-## Estrutura dos Scripts
-Todos os scripts estão organizados na pasta `scripts/`:
+## ⚡ Quick Installation
+
+---
+
+## Script Structure
+All scripts are organized in the `scripts/` folder:
 ```
 scripts/
-├── build-windows.ps1  # Compila para Windows
-├── build-linux.sh      # Compila para Linux
+├── build-windows.ps1  # Build for Windows
+├── build-linux.sh      # Build for Linux
 ├── windows/
-│   ├── install.ps1     # Instalação completa Windows (baixa + instala)
-│   └── uninstall.ps1   # Desinstala Windows
+│   ├── install.ps1     # Complete Windows installation (download + install)
+│   └── uninstall.ps1   # Uninstall Windows
 └── linux/
-    ├── install.sh      # Instalação completa Linux (baixa + instala)
-    └── uninstall.sh    # Desinstala Linux
+    ├── install.sh      # Complete Linux installation (download + install)
+    └── uninstall.sh    # Uninstall Linux
 ```
 
 ---
 
 ### Windows
-#### Opção 1: Instalar versão latest (online)
-Abra o PowerShell como **ADMINISTRADOR** e execute:
+#### Option 1: Install latest version (online)
+Open PowerShell as **ADMINISTRATOR** and run:
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/manassesbinga/sonic/main/scripts/windows/install.ps1' -OutFile 'install-sonic.ps1'; .\install-sonic.ps1 -Version latest"
 ```
 
-#### Opção 2: Compilar e instalar local
+#### Option 2: Build and install locally
 ```powershell
-# Compila (opcionalmente com -Release para otimizado)
+# Build (optionally with -Release for optimized)
 .\scripts\build-windows.ps1 -Release
 
-# Instala o binário local
+# Install the local binary
 .\scripts\windows\install.ps1
 ```
 
-**Desinstalação:**
+**Uninstallation:**
 ```powershell
 .\scripts\windows\uninstall.ps1
 ```
@@ -73,87 +71,87 @@ powershell.exe -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https:/
 ---
 
 ### Linux
-#### Opção 1: Instalar versão latest (online)
+#### Option 1: Install latest version (online)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/manassesbinga/sonic/main/scripts/linux/install.sh -o install-sonic.sh
 chmod +x install-sonic.sh
 sudo ./install-sonic.sh --version latest
 ```
 
-#### Opção 2: Compilar e instalar local
+#### Option 2: Build and install locally
 ```bash
-# Compila (opcionalmente com --release para otimizado)
+# Build (optionally with --release for optimized)
 chmod +x scripts/build-linux.sh
 ./scripts/build-linux.sh --release
 
-# Instala o binário local
+# Install the local binary
 sudo ./scripts/linux/install.sh
 ```
 
-**Desinstalação:**
+**Uninstallation:**
 ```bash
 sudo ./scripts/linux/uninstall.sh
 ```
 
 ---
 
-### Método Alternativo: Via Go (qualquer SO)
+### Alternative Method: Via Go (any OS)
 ```bash
 go install github.com/manassesbinga/sonic@latest
 ```
 
 ---
 
-## 🚀 Quick Start (3 passos)
+## 🚀 Quick Start (3 steps)
 
 ```bash
-# 1. Inicialize um novo projeto
+# 1. Initialize a new project
 sonic init
 
-# 2. Crie seu primeiro worker
+# 2. Create your first worker
 sonic new hello
 
-# 3. Execute em modo desenvolvimento (hot-reload)
+# 3. Run in development mode (hot-reload)
 sonic dev
 ```
 
-Ou teste um worker diretamente:
+Or test a worker directly:
 ```bash
 sonic run hello --method POST --header "X-Test: value"
 ```
 
-Produção:
+Production:
 ```bash
 sonic start
 ```
 
 ---
 
-## 📖 Comandos CLI
+## 📖 CLI Commands
 
-| Comando | Descrição |
-|---------|-----------|
-| `sonic init` | Inicializa novo projeto (cria `sonic.yaml`, `functions/`, `modules/`) |
-| `sonic new <nome>` | Cria um novo worker JavaScript em `functions/<nome>.js` |
-| `sonic list` | Lista todos os workers disponíveis |
-| `sonic run <nome>` | Executa um worker diretamente para teste |
-| `sonic dev` | Modo desenvolvimento com **hot-reload** |
-| `sonic start` | Modo produção |
-| `sonic info` | Mostra informações do projeto e sistema |
-| `sonic ca install` | Gera/instala Root CA para TLS MITM |
-| `sonic version` | Versão do Sonic |
-| `sonic --help` | Ajuda geral |
+| Command | Description |
+|---------|-------------|
+| `sonic init` | Initialize new project (creates `sonic.yaml`, `functions/`, `modules/`) |
+| `sonic new &lt;name&gt;` | Create a new JavaScript worker in `functions/&lt;name&gt;.js` |
+| `sonic list` | List all available workers |
+| `sonic run &lt;name&gt;` | Run a worker directly for testing |
+| `sonic dev` | Development mode with **hot-reload** |
+| `sonic start` | Production mode |
+| `sonic info` | Show project and system information |
+| `sonic ca install` | Generate/install Root CA for TLS MITM |
+| `sonic version` | Sonic version |
+| `sonic --help` | General help |
 
-### Exemplos de uso:
+### Usage examples:
 
 ```bash
-sonic new minha_api     # Cria functions/minha_api.js
-sonic list              # Lista todos workers
-sonic run minha_api     # Testa o worker
-sonic dev               # Desenvolvimento com auto-reload
+sonic new my_api     # Creates functions/my_api.js
+sonic list              # List all workers
+sonic run my_api     # Test the worker
+sonic dev               # Development with auto-reload
 ```
 
-
+---
 
 ## Architecture
 
@@ -164,27 +162,27 @@ sonic dev               # Desenvolvimento com auto-reload
 ```
 Client ──► Transparent Proxy (:8443)
               │
-              ├─ 1. BufferedConn Peek (1024 bytes, sem consumo)
+              ├─ 1. BufferedConn Peek (1024 bytes, no consumption)
               ├─ 2. ExtractSNI() — Parse TLS ClientHello
               ├─ 3. shouldBypass() — wildcard bypass domains
               │
-              ├─ [Bypass] ──► Passthrough ──► io.Copy (criptografado)
+              ├─ [Bypass] ──► Passthrough ──► io.Copy (encrypted)
               │
               └─ [Intercept] ──► TLS MITM Engine
                                    │
                                    ├─ InterceptTermTLS(client)
-                                   │   └─ Cert dynamic do cache
+                                   │   └─ Cert dynamic from cache
                                    │
                                    ├─ HTTP Loop:
                                    │   ├─ ReadRequest(clientTLS)
                                    │   ├─ jsEngine.RunOnTraffic(req)
-                                   │   │   ├─ VM do pool (sem cold start)
+                                   │   │   ├─ VM from pool (no cold start)
                                    │   │   ├─ CPU watchdog (timeout)
                                    │   │   ├─ onTraffic() JS
-                                   │   │   └─ Retorna Request ou Response
+                                   │   │   └─ Returns Request or Response
                                    │   │
                                    │   ├─ ConnectRealServer(upstream)
-                                   │   │   └─ TLS estrito (InsecureSkipVerify: false)
+                                   │   │   └─ Strict TLS (InsecureSkipVerify: false)
                                    │   │
                                    │   ├─ WriteRequest(serverTLS)
                                    │   ├─ ReadResponse(serverTLS)
@@ -209,14 +207,14 @@ Client ──► Transparent Proxy (:8443)
 | **Payload 500KB** | ~612 MB/s | - | - | - | - |
 | **Cold start** | 0ms (always-on) | ~5ms | ~5ms | ~5ms | ~500ms |
 
-### Por que Sonic é mais rápido?
+### Why is Sonic faster?
 
-| Razão | Detalhe |
+| Reason | Detail |
 |-------|---------|
-| **Goja VM** | Pure Go, sem CGO, sem cross-language boundary |
-| **VM Pool** | 64 VMs pré-aquecidas em sync.Pool — zero cold start |
-| **eBPF Sockmap** | Kernel bypass com zero-copy TCP splicing |
-| **Single Leaf Key** | CertCache reusa mesma chave RSA para todos os certificados |
+| **Goja VM** | Pure Go, no CGO, no cross-language boundary |
+| **VM Pool** | 64 pre-warmed VMs in sync.Pool — zero cold start |
+| **eBPF Sockmap** | Kernel bypass with zero-copy TCP splicing |
+| **Single Leaf Key** | CertCache reuses the same RSA key for all certificates |
 
 ---
 
@@ -285,7 +283,7 @@ import "github.com/manassesbinga/sonic/config"   // Configuration
 
 ## Worker API
 
-Workers usam API **compatível com Cloudflare Workers**:
+Workers use **Cloudflare Workers compatible API**:
 
 ```javascript
 function onTraffic(request) {
@@ -311,35 +309,35 @@ function onResponse(response) {
 | `jwtVerify(token, secret)` | JWT verification |
 | `require("module")` | Local modules from `./modules/` |
 | `module.exports` | Node.js-style module exports |
-| `kv` | KV Store persistente (bbolt) para estado partilhado |
+| `kv` | Persistent KV Store (bbolt) for shared state |
 
-### KV Store API (estado partilhado)
-Workers JavaScript podem ler/escrever no KV Store persistente:
+### KV Store API (shared state)
+JavaScript workers can read/write to the persistent KV Store:
 ```javascript
 function onTraffic(request) {
   const ip = request.headers.get("X-Real-IP");
   
-  // Ler do KV
+  // Read from KV
   const count = kv.get(`rate:${ip}`) || "0";
   
-  if (parseInt(count) > 100) {
+  if (parseInt(count) &gt; 100) {
     return new Response("Rate limited", { status: 429 });
   }
   
-  // Escrever no KV
+  // Write to KV
   kv.set(`rate:${ip}`, (parseInt(count) + 1).toString());
   
   return request;
 }
 ```
 
-Métodos disponíveis:
-- `kv.get(key)` → Retorna o valor (string) ou ""
-- `kv.set(key, value)` → Armazena o valor
-- `kv.delete(key)` → Remove a chave
-- `kv.exists(key)` → Verifica se a chave existe
-- `kv.keys()` → Retorna array com todas as chaves
-- `kv.clear()` → Limpa todo o KV Store
+Available methods:
+- `kv.get(key)` → Returns the value (string) or ""
+- `kv.set(key, value)` → Stores the value
+- `kv.delete(key)` → Removes the key
+- `kv.exists(key)` → Checks if the key exists
+- `kv.keys()` → Returns array with all keys
+- `kv.clear()` → Clears the entire KV Store
 
 ### require() — Local Modules
 
@@ -360,7 +358,7 @@ request.headers.set("X-Request-ID", uuid.v4());
 
 ## Configuration
 
-Config via `sonic.yaml` ou environment variables (`SONIC_*`):
+Config via `sonic.yaml` or environment variables (`SONIC_*`):
 
 ```yaml
 listen_port: 8443
@@ -424,7 +422,7 @@ sonic/
 ├── config/       ─── Configuration (YAML + env vars)
 ├── proxy/        ─── Transparent proxy core
 │   ├── transparent.go  ─── Connection handling, request flow
-│   ├── connection.go   ─── BufferedConn (peek sem consumo)
+│   ├── connection.go   ─── BufferedConn (peek without consumption)
 │   └── sni_parser.go   ─── TLS ClientHello parser (RFC 5246, 6066)
 ├── mitm/         ─── TLS Man-in-the-Middle
 │   ├── engine.go       ─── MITM orchestration
@@ -464,14 +462,14 @@ Sonic (sdk/)
 │   ├── *sync.Pool (64 VMs)
 │   └── timeoutMS (default: 50ms)
 │   │
-│   └── Cada VM:
+│   └── Each VM:
 │       ├── setupBridges()
 │       │   ├── log(msg)
 │       │   ├── jwtVerify(token, secret)
 │       │   ├── require(modulePath)
 │       │   └── _goFetch(method, url, headers, body)
-│       └── JSBootstrap (230 linhas)
-│           ├── class Headers (Proxy p/ acesso direto)
+│       └── JSBootstrap (230 lines)
+│           ├── class Headers (Proxy for direct access)
 │           ├── class Request
 │           ├── class Response
 │           ├── fetch()
@@ -510,11 +508,11 @@ Sonic (sdk/)
 
 ### Security Model
 
-- **Upstream verification:** `InsecureSkipVerify: false` — upstream TLS é sempre validado
-- **Dynamic certs:** Gerados por um Root CA de 10 anos, com cache RWMutex
-- **Timeout:** CPU watchdog goroutine com `vm.Interrupt()` em 50ms
-- **Panic recovery:** `defer recover()` em cada execução — VM corrompida é substituída
-- **Failsafe:** `bypass` (continua sem JS) ou `block` (retorna 500)
+- **Upstream verification:** `InsecureSkipVerify: false` — upstream TLS is always validated
+- **Dynamic certs:** Generated by a 10-year Root CA, with RWMutex cache
+- **Timeout:** CPU watchdog goroutine with `vm.Interrupt()` in 50ms
+- **Panic recovery:** `defer recover()` on each execution — corrupted VM is replaced
+- **Failsafe:** `bypass` (continues without JS) or `block` (returns 500)
 
 ---
 
@@ -576,48 +574,48 @@ make docker-run  # Run via Docker Compose
 
 ---
 
-## 🚧 Roadmap Público
+## 🚧 Public Roadmap
 
 ### v0.2 — Observability
 - [ ] OpenTelemetry traces + Prometheus metrics
-- [ ] Grafana dashboard incluído no `extras/grafana/`
+- [ ] Grafana dashboard included in `extras/grafana/`
 - [ ] Structured logging (JSON)
-- [ ] Endpoint `/metrics` para Prometheus
+- [ ] `/metrics` endpoint for Prometheus
 
 ### v0.3 — Storage
-- [x] **KV Store nativo (bbolt)** (embutido, zero dependências externas)
+- [x] **Native KV Store (bbolt)** (embedded, zero external dependencies)
 - [ ] Worker-level caching API
-- [ ] TTL (Time-To-Live) para entradas KV
-- [ ] Backup/restore do KV Store
+- [ ] TTL (Time-To-Live) for KV entries
+- [ ] KV Store backup/restore
 
 ### v0.4 — Clustering
 - [ ] Cluster mode via `hashicorp/memberlist` (gossip protocol)
 - [ ] Distributed rate limiting
-- [ ] Workers sincronizados entre nós
-- [ ] KV Store distribuído
+- [ ] Workers synchronized between nodes
+- [ ] Distributed KV Store
 
 ### v0.5 — Runtime
 - [ ] **WebAssembly worker support** (Rust, Go, C, AssemblyScript)
-- [ ] Worker pipeline/composition (declarativo via `sonic.yaml`)
+- [ ] Worker pipeline/composition (declarative via `sonic.yaml`)
 - [ ] Native workers via stdin/stdout
-- [ ] Testing framework para workers integrado
+- [ ] Integrated testing framework for workers
 
 ### v1.0 — Production Ready
 - [ ] Full Cloudflare Workers API compatibility
 - [ ] Security audit
-- [ ] Load test suite (alvo: 50k req/s)
-- [ ] mTLS + Certificate Pinning programático
-- [ ] Cluster mode production-ready
+- [ ] Load test suite (target: 50k req/s)
+- [ ] mTLS + programmatic Certificate Pinning
+- [ ] Production-ready cluster mode
 
 ---
 
-## O que faz um sénior parar e estrelar? 🤩
+## What makes a senior stop and star? 🤩
 
-A combinação **eBPF + WASM workers + KV distribuído** não existe em nenhum projeto open-source! O Sonic é o único proxy onde podes:
-- Escrever um worker em Rust (compilado para WASM)
-- Compartilhar estado com um worker em JavaScript
-- Interceptar pacotes DNS e HTTP no mesmo pipeline
-- Tudo isso na velocidade de kernel via eBPF!
+The **eBPF + WASM workers + distributed KV** combination doesn't exist in any open-source project! Sonic is the only proxy where you can:
+- Write a worker in Rust (compiled to WASM)
+- Share state with a JavaScript worker
+- Intercept DNS and HTTP packets in the same pipeline
+- All this at kernel speed via eBPF!
 
 ---
 
