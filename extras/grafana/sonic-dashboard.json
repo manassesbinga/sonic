@@ -1,0 +1,84 @@
+{
+  "title": "Sonic - Edge Proxy",
+  "uid": "sonic-edge-proxy",
+  "tags": ["sonic", "proxy", "edge"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "title": "Requests per second",
+      "type": "graph",
+      "span": 6,
+      "targets": [
+        {
+          "expr": "rate(sonic_requests_total[1m])",
+          "legendFormat": "{{sonic_domain}} {{sonic_mode}}"
+        }
+      ]
+    },
+    {
+      "title": "Request latency (p50/p95/p99)",
+      "type": "graph",
+      "span": 6,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(sonic_request_duration_ms_bucket[1m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(sonic_request_duration_ms_bucket[1m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(sonic_request_duration_ms_bucket[1m]))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "title": "JS execution duration",
+      "type": "graph",
+      "span": 6,
+      "targets": [
+        {
+          "expr": "rate(sonic_js_execution_duration_ms_sum[1m]) / rate(sonic_js_execution_duration_ms_count[1m])",
+          "legendFormat": "avg {{sonic_js_function}}"
+        }
+      ]
+    },
+    {
+      "title": "Active connections",
+      "type": "graph",
+      "span": 6,
+      "targets": [
+        {
+          "expr": "sonic_connections_active",
+          "legendFormat": "active"
+        }
+      ]
+    },
+    {
+      "title": "Error rate",
+      "type": "graph",
+      "span": 6,
+      "targets": [
+        {
+          "expr": "rate(sonic_errors_total[1m])",
+          "legendFormat": "{{sonic_error_type}}"
+        }
+      ]
+    },
+    {
+      "title": "VM Pool Size",
+      "type": "graph",
+      "span": 6,
+      "targets": [
+        {
+          "expr": "sonic_vm_pool_size",
+          "legendFormat": "pool"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 14,
+  "version": 1
+}

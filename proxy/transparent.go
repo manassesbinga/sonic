@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +15,10 @@ import (
 	"github.com/manassesbinga/sonic/config"
 	"github.com/manassesbinga/sonic/mitm"
 	"github.com/manassesbinga/sonic/runtime"
+	"github.com/manassesbinga/sonic/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TransparentProxy is the core proxy that intercepts TLS connections,
@@ -31,6 +36,8 @@ type TransparentProxy struct {
 	listener   net.Listener
 	shutdown   chan struct{}
 	wg         sync.WaitGroup
+	telemetry  *telemetry.Telemetry
+	metrics    *telemetry.Metrics
 }
 
 // NewTransparentProxy creates a new TransparentProxy with the given config,
@@ -41,6 +48,8 @@ func NewTransparentProxy(cfg *config.Config, mitmEngine *mitm.MITMEngine, jsEngi
 		mitmEngine: mitmEngine,
 		jsEngine:   jsEngine,
 		shutdown:   make(chan struct{}),
+		telemetry:  telemetry.GetTelemetry(),
+		metrics:    telemetry.GetMetrics(),
 	}
 }
 
@@ -108,26 +117,32 @@ func (p *TransparentProxy) acceptConnections() {
 func (p *TransparentProxy) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
+	ctx := context.Background()
+	if p.telemetry != nil {
+		ctx, _ = p.telemetry.StartSpan(ctx, "sonic.handle_connection",
+			trace.WithAttributes(attribute.String("sonic.local_addr", conn.LocalAddr().String())),
+		)
+	}
+
 	bufferedConn := NewBufferedConn(conn)
 
-	// Peek 5 bytes for the TLS record header to find the actual payload length
 	header, err := bufferedConn.Peek(5)
 	if err != nil {
+		if p.metrics != nil {
+			telemetry.RecordError(p.metrics, ctx, "peek_failed", "unknown")
+		}
 		return
 	}
 
 	if header[0] != 0x16 {
-		// Not a TLS Handshake record
 		return
 	}
 
-	// Extract TLS Handshake record length (bytes 3 and 4)
 	recordLen := int(header[3])<<8 | int(header[4])
 	if recordLen <= 0 || recordLen > 8192 {
 		return
 	}
 
-	// Peek the exact ClientHello size (record length + 5 bytes header)
 	peekBytes, err := bufferedConn.Peek(recordLen + 5)
 	if err != nil {
 		return
@@ -138,12 +153,16 @@ func (p *TransparentProxy) handleConnection(conn net.Conn) {
 		return
 	}
 
+	if p.telemetry != nil {
+		trace.SpanFromContext(ctx).SetAttributes(attribute.String("sonic.domain", domain))
+	}
+
 	if p.shouldBypass(domain) {
-		p.runPassthrough(bufferedConn, domain)
+		p.runPassthrough(ctx, bufferedConn, domain)
 		return
 	}
 
-	p.runIntercept(bufferedConn, domain)
+	p.runIntercept(ctx, bufferedConn, domain)
 }
 
 func (p *TransparentProxy) shouldBypass(domain string) bool {
@@ -165,11 +184,23 @@ func (p *TransparentProxy) shouldBypass(domain string) bool {
 	return false
 }
 
-func (p *TransparentProxy) runPassthrough(clientConn net.Conn, domain string) {
+func (p *TransparentProxy) runPassthrough(ctx context.Context, clientConn net.Conn, domain string) {
+	start := time.Now()
+
+	if p.telemetry != nil {
+		var spanSpan trace.Span
+		ctx, spanSpan = p.telemetry.StartSpan(ctx, "sonic.run_passthrough",
+			trace.WithAttributes(attribute.String("sonic.domain", domain)),
+		)
+		defer spanSpan.End()
+	}
+
 	serverAddr := fmt.Sprintf("%s:%s", domain, getUpstreamPort())
 	serverConn, err := net.DialTimeout("tcp", serverAddr, 5*time.Second)
 	if err != nil {
-		fmt.Printf("[PASSTHROUGH ERROR] Falha ao conectar ao servidor real %s: %v\n", serverAddr, err)
+		if p.metrics != nil {
+			telemetry.RecordError(p.metrics, ctx, "passthrough_connect_failed", domain)
+		}
 		return
 	}
 	defer serverConn.Close()
@@ -188,30 +219,61 @@ func (p *TransparentProxy) runPassthrough(clientConn net.Conn, domain string) {
 	}()
 
 	wg.Wait()
+
+	if p.metrics != nil {
+		telemetry.RecordRequest(p.metrics, ctx, domain, "passthrough", 0, time.Since(start))
+	}
 }
 
-func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
+func (p *TransparentProxy) runIntercept(ctx context.Context, clientConn net.Conn, domain string) {
+	start := time.Now()
+	if p.metrics != nil {
+		p.metrics.ConnectionsActive.Add(ctx, 1,
+			metric.WithAttributes(attribute.String("sonic.domain", domain), attribute.String("sonic.mode", "intercept")),
+		)
+		defer p.metrics.ConnectionsActive.Add(ctx, -1,
+			metric.WithAttributes(attribute.String("sonic.domain", domain), attribute.String("sonic.mode", "intercept")),
+		)
+	}
+
+	if p.telemetry != nil {
+		var spanSpan trace.Span
+		ctx, spanSpan = p.telemetry.StartSpan(ctx, "sonic.run_intercept",
+			trace.WithAttributes(attribute.String("sonic.domain", domain)),
+		)
+		defer spanSpan.End()
+	}
+
 	clientTLSConn, err := p.mitmEngine.InterceptTermTLS(clientConn, domain)
 	if err != nil {
-		fmt.Printf("[MITM ERROR] Falha no handshake terminação com o cliente (%s): %v\n", domain, err)
+		if p.metrics != nil {
+			telemetry.RecordError(p.metrics, ctx, "mitm_terminate_failed", domain)
+		}
 		return
 	}
 	defer clientTLSConn.Close()
 
 	if err := clientTLSConn.Handshake(); err != nil {
-		fmt.Printf("[MITM ERROR] Handshake de terminacao TLS falhou: %v\n", err)
+		if p.metrics != nil {
+			telemetry.RecordError(p.metrics, ctx, "tls_handshake_failed", domain)
+		}
 		return
 	}
 
 	serverTLSConn, err := p.mitmEngine.ConnectRealServer(domain+":"+getUpstreamPort(), domain)
 	if err != nil {
-		fmt.Printf("[MITM ERROR] Falha ao re-encriptar conexao com o servidor real %s: %v\n", domain, err)
+		if p.metrics != nil {
+			telemetry.RecordError(p.metrics, ctx, "upstream_connect_failed", domain)
+		}
 		return
 	}
 	defer serverTLSConn.Close()
 
 	reader := bufio.NewReader(clientTLSConn)
+	reqCount := 0
 	for {
+		reqStart := time.Now()
+
 		req, err := http.ReadRequest(reader)
 		if err != nil {
 			if err == io.EOF {
@@ -219,6 +281,7 @@ func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
 			}
 			return
 		}
+		reqCount++
 
 		jsReq := &runtime.Request{
 			Method:  req.Method,
@@ -240,6 +303,12 @@ func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
 
 		trafficResult, err := p.getJSEngine().RunOnTraffic(jsReq)
 		if err != nil {
+			if p.metrics != nil {
+				telemetry.RecordError(p.metrics, ctx, "js_onTraffic_failed", domain)
+			}
+			if p.telemetry != nil {
+				trace.SpanFromContext(ctx).RecordError(err)
+			}
 			if p.cfg.Runtime.Failsafe == "block" {
 				resp := &http.Response{
 					StatusCode: 500,
@@ -273,6 +342,10 @@ func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
 				directResp.Header.Set(k, v)
 			}
 			_ = directResp.Write(clientTLSConn)
+
+			if p.metrics != nil {
+				telemetry.RecordRequest(p.metrics, ctx, domain, "intercept_direct_resp", trafficResult.Status, time.Since(start))
+			}
 			return
 		}
 
@@ -311,6 +384,9 @@ func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
 
 		modJSResp, err := p.getJSEngine().RunOnResponse(jsResp)
 		if err != nil {
+			if p.metrics != nil {
+				telemetry.RecordError(p.metrics, ctx, "js_onResponse_failed", domain)
+			}
 			modJSResp = jsResp
 		}
 
@@ -329,6 +405,14 @@ func (p *TransparentProxy) runIntercept(clientConn net.Conn, domain string) {
 		if err := newResp.Write(clientTLSConn); err != nil {
 			return
 		}
+
+		if p.metrics != nil {
+			telemetry.RecordRequest(p.metrics, ctx, domain, "intercept", modJSResp.Status, time.Since(reqStart))
+		}
+	}
+
+	if p.metrics != nil && reqCount > 0 {
+		telemetry.RecordRequest(p.metrics, ctx, domain, "intercept", 0, time.Since(start))
 	}
 }
 

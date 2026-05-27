@@ -18,20 +18,20 @@ var (
 
 var RootCmd = &cobra.Command{
 	Use:   "sonic",
-	Short: "Sonic - Edge JavaScript Engine (Cloudflare Workers-compatible)",
+	Short: "Sonic — Multi-Language, Multi-Protocol Edge Engine",
 	Long: Cyan(`
   ╔══════════════════════════════════════════════════════╗
   ║                     SONIC                           ║
-  ║         Edge JavaScript Engine & Proxy              ║
-  ║   Accelerated by eBPF | MITM TLS | Cloudflare API   ║
+  ║  Multi-Language, Multi-Protocol Edge Engine       ║
+  ║  eBPF-accelerated | KV Store | WASM/JS/Native ║
   ╚══════════════════════════════════════════════════════╝
                       `) + `
-Sonic is a transparent L7 proxy with edge JavaScript execution,
-powered by eBPF Sockmap acceleration and dynamic TLS MITM.
-
-Compatible with Cloudflare Workers API (Headers, Request, Response, fetch)
-— run your workers locally, at the network edge.
-` + Yellow("  ▶ https://github.com/anomalyco/sonic"),
+Sonic is a platform for running logic over ANY network data!
+- Multiple languages: JavaScript (Goja), WebAssembly (Rust/Go/C), Native
+- Multiple protocols: HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC
+- Shared state: Persistent KV Store (bbolt)
+- Compatible with Cloudflare Workers API
+` + Yellow("  ▶ https://github.com/manassesbinga/sonic"),
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
@@ -47,6 +47,8 @@ func Execute() {
 	RootCmd.AddCommand(infoCmd)
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(completionCmd)
+	RootCmd.AddCommand(statusCmd)
+	RootCmd.AddCommand(dashboardCmd)
 	caCmd.AddCommand(caInstallCmd)
 	RootCmd.AddCommand(caCmd)
 
@@ -77,9 +79,10 @@ var versionCmd = &cobra.Command{
 
 		pairs := [][2]string{
 			{"Sonic", "v" + Version},
-			{"Engine", "goja (Pure Go JavaScript VM)"},
+			{"Engines", "JavaScript (Goja) + WebAssembly (wazero)"},
 			{"API", "Cloudflare Workers-compatible"},
-			{"Protocol", "HTTP/1.1, TLS 1.2+"},
+			{"Protocols", "HTTP/1.1, TLS 1.2+ (Multi-protocol coming soon)"},
+			{"KV Store", "bbolt (Persistent)"},
 			{"License", "MIT"},
 		}
 

@@ -182,8 +182,8 @@ func PrintBanner(version string) {
 	banner := `
   ╔══════════════════════════════════════════════════════╗
   ║                     %s                           ║
-  ║         Edge JavaScript Engine & Proxy              ║
-  ║   Accelerated by eBPF | MITM TLS | Cloudflare API   ║
+  ║  Multi-Language, Multi-Protocol Edge Engine       ║
+  ║  eBPF-accelerated | KV Store | WASM/JS/Native ║
   ╚══════════════════════════════════════════════════════╝
 `
 	fmt.Printf(Cyan(banner), Bold("SONIC v"+version))

@@ -1,11 +1,16 @@
 package mitm
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"os"
 	"time"
+
+	"github.com/manassesbinga/sonic/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // MITMEngine handles TLS Man-in-the-Middle operations.
@@ -42,6 +47,16 @@ func NewMITMEngine(caDir string) (*MITMEngine, error) {
 // The clientConn should be a raw TCP connection from the client.
 // domain is the SNI hostname extracted from the ClientHello.
 func (m *MITMEngine) InterceptTermTLS(clientConn net.Conn, domain string) (*tls.Conn, error) {
+	ctx := context.Background()
+	if t := telemetry.GetTelemetry(); t != nil {
+		var span trace.Span
+		ctx, span = t.StartSpan(ctx, "mitm.intercept_term_tls",
+			trace.WithAttributes(attribute.String("sonic.domain", domain)),
+		)
+		defer span.End()
+		_ = ctx
+	}
+
 	tlsCert, err := m.cache.GetCertificate(domain)
 	if err != nil {
 		return nil, fmt.Errorf("falha ao obter certificado dinamico: %w", err)
@@ -62,6 +77,19 @@ func (m *MITMEngine) InterceptTermTLS(clientConn net.Conn, domain string) (*tls.
 // addr is the server address (e.g. "example.com:443").
 // domain is the SNI hostname for TLS verification.
 func (m *MITMEngine) ConnectRealServer(addr string, domain string) (*tls.Conn, error) {
+	ctx := context.Background()
+	if t := telemetry.GetTelemetry(); t != nil {
+		var span trace.Span
+		ctx, span = t.StartSpan(ctx, "mitm.connect_upstream",
+			trace.WithAttributes(
+				attribute.String("sonic.domain", domain),
+				attribute.String("sonic.upstream_addr", addr),
+			),
+		)
+		defer span.End()
+		_ = ctx
+	}
+
 	insecure := false
 	if os.Getenv("SONIC_TEST_UPSTREAM_PORT") != "" {
 		insecure = true

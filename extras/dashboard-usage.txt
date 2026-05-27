@@ -1,0 +1,82 @@
+═══════════════════════════════════════════════════════════
+              SONIC DASHBOARD — USAGE GUIDE
+═══════════════════════════════════════════════════════════
+
+Commands:
+
+  sonic status           Show metrics once and exit
+  sonic dashboard        Live dashboard, refreshes every 2s
+
+Flags (both commands):
+
+  -a, --addr string      Metrics server address (default: localhost:9090)
+
+Examples:
+
+  1. Start Sonic with telemetry enabled:
+
+       sonic dev -c sonic.yaml
+
+     Or using the compiled binary:
+
+       .\dist\sonic-windows-amd64.exe dev -c sonic.yaml
+
+  2. View metrics once:
+
+       sonic status
+       .\dist\sonic-windows-amd64.exe status
+
+  3. Live dashboard (press Ctrl+C to exit):
+
+       sonic dashboard
+       .\dist\sonic-windows-amd64.exe dashboard
+
+  4. Custom metrics address:
+
+       sonic dashboard --addr 192.168.1.100:9090
+       sonic status -a localhost:9091
+
+What you see:
+
+  ┌─────────────────────────────────────────────────────┐
+  │                 SONIC DASHBOARD                     │
+  ├───────────────────────────┬─────────────────────────┤
+  │ Requests total            │ 1,420                   │
+  │ Active connections        │ 8                       │
+  │ VM pool size              │ 64                      │
+  │ Errors                    │ 0                       │
+  ├───────────────────────────┴─────────────────────────┤
+  │ Top Domains:                                        │
+  │  api.example.com    ████████████  1,050 (52%)       │
+  │  app.example.com    ████████        630 (31%)       │
+  │  cdn.example.com    ████            340 (17%)       │
+  └─────────────────────────────────────────────────────┘
+
+Metrics parsed from Prometheus /metrics endpoint:
+
+  sonic_requests_total        Total requests processed
+  sonic_connections_active    Active proxy connections
+  sonic_vm_pool_size          JS/WASM VM pool size
+  sonic_errors_total          Total error count
+
+Integration tests (6 tests):
+
+  go test ./tests/... -run TestCLI_Dashboard -v
+
+  These start a fake metrics HTTP server and validate:
+  - Metric parsing from Prometheus text format
+  - Dashboard rendering output
+  - Server-down error handling
+  - Empty metrics handling
+  - Many domains (top 5 display)
+
+Unit tests (24 tests):
+
+  go test ./cli/... -v
+
+  Covers individual functions:
+  - parseLabels, parseMetrics, styleVal
+  - sumMetrics, findMetric, topDomains
+  - renderDashboard, truncStr
+
+═══════════════════════════════════════════════════════════

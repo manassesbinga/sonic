@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,9 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
+	"github.com/manassesbinga/sonic/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ErrExecutionTimeout is returned when a JS script exceeds its CPU time limit.
@@ -21,10 +25,13 @@ var ErrExecutionTimeout = errors.New("execution timeout: script exceeded CPU tim
 // JSEngine manages a pool of Goja JavaScript VMs for concurrent request processing.
 // It pre-compiles user scripts and provides onTraffic/onResponse execution with
 // CPU watchdog timeouts and panic recovery.
+//
+// JSEngine implements the WorkerEngine interface.
 type JSEngine struct {
 	program   *goja.Program
 	vmPool    *sync.Pool
 	timeoutMS time.Duration
+	kvStore   *KVStore
 }
 
 // NewJSEngine creates a new JSEngine, compiles the JS code once, and pre-warms
@@ -36,6 +43,11 @@ type JSEngine struct {
 //   - timeoutMS: max execution time per call (e.g. 50ms)
 //   - poolSize: number of pre-warmed VMs (e.g. 64)
 func NewJSEngine(jsCode string, timeoutMS int, poolSize int) (*JSEngine, error) {
+	return NewJSEngineWithKV(jsCode, timeoutMS, poolSize, nil)
+}
+
+// NewJSEngineWithKV creates a new JSEngine with a shared KV Store.
+func NewJSEngineWithKV(jsCode string, timeoutMS int, poolSize int, kvStore *KVStore) (*JSEngine, error) {
 	program, err := goja.Compile("worker.js", jsCode, false)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao compilar codigo javascript: %w", err)
@@ -44,6 +56,7 @@ func NewJSEngine(jsCode string, timeoutMS int, poolSize int) (*JSEngine, error) 
 	engine := &JSEngine{
 		program:   program,
 		timeoutMS: time.Duration(timeoutMS) * time.Millisecond,
+		kvStore:   kvStore,
 	}
 
 	engine.vmPool = &sync.Pool{
@@ -61,6 +74,48 @@ func NewJSEngine(jsCode string, timeoutMS int, poolSize int) (*JSEngine, error) 
 	}
 
 	return engine, nil
+}
+
+// Type implements WorkerEngine.Type.
+func (e *JSEngine) Type() WorkerType {
+	return WorkerTypeJavaScript
+}
+
+// Close implements WorkerEngine.Close.
+func (e *JSEngine) Close() error {
+	return nil
+}
+
+// ProcessPacket implements WorkerEngine.ProcessPacket.
+// It converts the generic Packet to the HTTP-specific Request/Response and calls onTraffic/onResponse.
+func (e *JSEngine) ProcessPacket(packet *Packet) (*PacketResult, error) {
+	if packet.Request != nil {
+		result, err := e.RunOnTraffic(packet.Request)
+		if err != nil {
+			return nil, err
+		}
+		if result.IsResponse {
+			return &PacketResult{
+				Allow:    true,
+				Packet:   packet,
+				Response: &Response{Status: result.Status, Headers: result.Headers, Body: result.Body},
+			}, nil
+		}
+		modifiedReq := &Request{Method: result.Method, URL: result.URL, Path: result.Path, Headers: result.Headers, Body: result.Body}
+		modifiedPacket := *packet
+		modifiedPacket.Request = modifiedReq
+		return &PacketResult{Allow: true, Packet: &modifiedPacket}, nil
+	}
+	if packet.Response != nil {
+		resp, err := e.RunOnResponse(packet.Response)
+		if err != nil {
+			return nil, err
+		}
+		modifiedPacket := *packet
+		modifiedPacket.Response = resp
+		return &PacketResult{Allow: true, Packet: &modifiedPacket}, nil
+	}
+	return &PacketResult{Allow: true, Packet: packet}, nil
 }
 
 func (e *JSEngine) createVM() *goja.Runtime {
@@ -106,6 +161,34 @@ func (e *JSEngine) setupBridges(vm *goja.Runtime) {
 		}
 		return len(token) > 10
 	})
+
+	// KV Store bridge - shared state between all workers
+	if e.kvStore != nil {
+		vm.Set("kv", map[string]interface{}{
+			"get": func(key string) string {
+				val := e.kvStore.Get(key)
+				if val == nil {
+					return ""
+				}
+				return string(val)
+			},
+			"set": func(key string, value string) {
+				_ = e.kvStore.Set(key, []byte(value))
+			},
+			"delete": func(key string) {
+				_ = e.kvStore.Delete(key)
+			},
+			"exists": func(key string) bool {
+				return e.kvStore.Exists(key)
+			},
+			"keys": func() []string {
+				return e.kvStore.Keys()
+			},
+			"clear": func() {
+				_ = e.kvStore.Clear()
+			},
+		})
+	}
 
 	// require() loads JS modules from the ./modules/ directory.
 	// Modules should set module.exports = { ... }.
@@ -198,6 +281,23 @@ func (e *JSEngine) setupBridges(vm *goja.Runtime) {
 //   - a Response directly (WAF block, redirect, etc.)
 //   - null/undefined (preserves original request)
 func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
+	start := time.Now()
+	if t := telemetry.GetTelemetry(); t != nil {
+		_, span := t.StartSpan(context.Background(), "js.run_on_traffic",
+			trace.WithAttributes(
+				attribute.String("sonic.js_function", "onTraffic"),
+				attribute.String("http.method", req.Method),
+				attribute.String("http.url", req.URL),
+			),
+		)
+		defer span.End()
+	}
+	defer func() {
+		if m := telemetry.GetMetrics(); m != nil {
+			telemetry.RecordJSDuration(m, context.Background(), "onTraffic", time.Since(start))
+		}
+	}()
+
 	vm, err := e.getVM()
 	if err != nil {
 		return nil, err
@@ -282,6 +382,22 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 // RunOnResponse executes the user's onResponse function with a Response and
 // returns the (possibly modified) Response. Supports CPU watchdog timeout.
 func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
+	start := time.Now()
+	if t := telemetry.GetTelemetry(); t != nil {
+		_, span := t.StartSpan(context.Background(), "js.run_on_response",
+			trace.WithAttributes(
+				attribute.String("sonic.js_function", "onResponse"),
+				attribute.Int("http.status_code", resp.Status),
+			),
+		)
+		defer span.End()
+	}
+	defer func() {
+		if m := telemetry.GetMetrics(); m != nil {
+			telemetry.RecordJSDuration(m, context.Background(), "onResponse", time.Since(start))
+		}
+	}()
+
 	vm, err := e.getVM()
 	if err != nil {
 		return nil, err

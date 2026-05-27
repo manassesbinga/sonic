@@ -1,62 +1,149 @@
-# Sonic SDK & Multi-Language Examples
+# Exemplos de Workers Sonic 🚀
 
-## Go SDK Examples (embedded library)
+Pasta com exemplos práticos de workers que demonstram o poder da nova arquitetura Sonic!
 
-| Example | Description |
-|---------|-------------|
-| `basic/main.go` | Start Sonic, run a worker, stop |
-| `worker-only/main.go` | Use Sonic as JS engine (no proxy) |
-| `custom-server/main.go` | Integrate Sonic with custom HTTP server (TODO) |
+## Como usar
+Copie os arquivos `.js` para a pasta `functions/` do seu projeto Sonic e execute `sonic dev` ou `sonic start`!
 
-Run:
-```bash
-cd basic && go run main.go
+---
+
+## 📂 Exemplos por Framework/Projeto
+
+### 🚀 Next.js
+#### 5. [Proxy para API Routes](05-nextjs-api-proxy.js)
+- Rate limiting para rotas `/api/*`
+- Headers CORS e de segurança
+- Cache de respostas
+
+#### 6. [Autenticação Centralizada](06-nextjs-auth.js)
+- Protege páginas e APIs sem modificar o código Next.js
+- Rotas públicas configuráveis
+- Redirecionamento para login
+- Headers de usuário para o app
+
+### ⚛️ React/Vue/Angular (SPA)
+#### 7. [Proxy para SPA](07-spa-react-vue.js)
+- Fallback para `index.html` (roteamento SPA)
+- Cache de assets estáticos por 1 semana
+- Headers de segurança
+
+### 🟢 Node.js Backend (Express/NestJS/Fastify)
+#### 8. [Proxy para Backend Node.js](08-nodejs-backend.js)
+- Rate limiting global
+- Sanitização de inputs contra XSS/SQLi
+- Tracing com X-Request-ID
+- Log de performance
+
+### 📄 Site Estático (Hugo/Jekyll/Gatsby/HTML puro)
+#### 9. [Proxy para Site Estático](09-static-site.js)
+- Cache inteligente (1 ano para assets, 5min para HTML)
+- Redirecionamento www → non-www
+- Headers CSP e de segurança
+
+---
+
+## 📂 Exemplos Genéricos
+
+### 1. [Rate Limiter](01-rate-limiter.js)
+Limita cada IP a 100 requisições por minuto usando o KV Store persistente.
+- **Uso**: Protege APIs de abusos
+- **Features**: Headers informativos (X-RateLimit-*), resposta 429 com Retry-After
+
+### 2. [JWT Auth + Cache](02-jwt-auth.js)
+Valida tokens JWT e cacheia resultados no KV para performance máxima.
+- **Uso**: Autenticação de APIs
+- **Features**: Rotas públicas, cache por token, headers X-User-*
+
+### 3. [Transformação](03-transform.js)
+Modifica requests e responses em tempo real.
+- **Uso**: Migração de APIs, adição de headers de segurança
+- **Features**: Reescrita de URL, headers de segurança, tracing, métricas de latência
+
+### 4. [Logger Estruturado](04-structured-logger.js)
+Registra todas as requisições e coleta métricas no KV Store.
+- **Uso**: Observabilidade, analytics
+- **Features**: Log JSON, métricas por hora, contadores de status
+
+---
+
+## 💡 Ideias de Projetos Incríveis que Você Pode Criar
+
+### 🛡️ WAF (Web Application Firewall)
+Combine rate limiting + validação de payloads + bloqueio de IPs maliciosos.
+```javascript
+// Exemplo: Bloquear SQL Injection
+function onTraffic(req) {
+  const payload = req.body.toLowerCase();
+  if (payload.includes("union select") || payload.includes("drop table")) {
+    kv.set(`block:${req.headers.get("X-Real-IP")}`, "1");
+    return new Response("Forbidden", { status: 403 });
+  }
+  return req;
+}
 ```
 
-## Multi-Language Examples (via `sonic run` CLI)
+### 🔄 Gateway de API Unificado
+Combine múltiplos microsserviços em uma única API.
+- Reescrever URLs (`/api/users/` → `http://user-service:3000/`)
+- Autenticação centralizada
+- Rate limiting por endpoint
+- Cache de respostas
 
-Sonic's `sonic run` command runs a worker and outputs JSON. Any language
-that can execute a subprocess can use Sonic.
+### 📊 Analytics em Tempo Real
+Coletar métricas de todas as requisições e exibir dashboards.
+- Contadores por endpoint
+- Latência média
+- Taxa de erros
+- Top IPs, User-Agents, etc.
 
-| Language | File | How it works |
-|----------|------|-------------|
-| **Python** | `python/run_worker.py` | `subprocess.run(["sonic", "run", ...])` |
-| **Node.js** | `node/run_worker.js` | `child_process.execSync("sonic run ...")` |
-| **Shell** | `shell/run_worker.sh` | Direct `sonic run` in bash |
-
-Run:
-```bash
-python3 _examples/python/run_worker.py
-node _examples/node/run_worker.js
-bash _examples/shell/run_worker.sh   # requires jq for pretty-printing
+### 🎭 Mock Server para Desenvolvimento
+Retornar respostas mockadas para desenvolvimento sem depender de serviços externos.
+```javascript
+function onTraffic(req) {
+  if (req.url.includes("/api/mock/")) {
+    return new Response(JSON.stringify({ 
+      id: 123, 
+      name: "Mock User",
+      timestamp: Date.now()
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+  return req;
+}
 ```
 
-### The `sonic run` API
+### 🌍 Geolocalização e Bloqueio por País
+Usar IP para bloquear/redirecionar usuários por localização geográfica.
 
-```
-sonic run <worker.js> \
-  --method GET|POST|PUT|DELETE \
-  --url <url> \
-  --header "Key: Value" \
-  --body '<json>' \
-  --func onTraffic         # optional: function to run (default onTraffic)
-```
+### 🔐 Single Sign-On (SSO) Proxy
+Centralizar autenticação para múltiplos apps com OAuth2, SAML, etc.
 
-Output: JSON with `method`, `url`, `path`, `headers`, `body`, `status`
-(or raw JSON if the function returns `{_isResponse: true, ...}`).
+---
 
-### Using the proxy from other languages
+## 🔮 Auto-Compilação WASM (Programador Não Precisa Compilar!)
 
-Run Sonic as a background proxy, then point your app's HTTP client to it:
+O Sonic faz tudo automaticamente! Você só escreve o código na linguagem que quiser — o Sonic compila para WASM sozinho! 🚀
 
-```bash
-# Start proxy (background)
-sonic start --port 8443 --functions ./functions/
+### Como funciona?
+1. Você cria um arquivo `rate-limiter.rs` (Rust) ou `auth.go` (Go) na pasta `functions/`
+2. Você executa `sonic dev` ou `sonic start`
+3. **O Sonic detecta automaticamente, compila para WASM e executa!**
 
-# Or with Docker
-docker run -d --network host \
-  -v $(pwd)/functions:/functions \
-  sonic:latest
-```
+### Exemplos de Código (Prontos para Usar!)
 
-Then configure your app to use `http://127.0.0.1:8443` as an HTTPS proxy.
+#### 10. [Worker em Rust](10-rust-worker.rs)
+Escreva rate limiting ultra-rápido em Rust — o Sonic compila para WASM!
+
+#### 11. [Worker em Go](11-go-worker.go)
+Use Go para workers — compilação automática!
+
+---
+
+## 🔮 Próximos Passos
+Quando o suporte a WebAssembly estiver 100% pronto:
+- Suporte completo a **Rust**, **Go**, **C**, **AssemblyScript**
+- Compartilhar estado entre workers de diferentes linguagens via KV Store!
+
+🚀 O céu é o limite!

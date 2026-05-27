@@ -1,8 +1,16 @@
-# Sonic — Edge JavaScript Engine
+# Sonic — Multi-Language, Multi-Protocol Edge Engine
 
 ![Sonic Presentation](assets/logo.png)
 
-**Sonic** é um proxy L7 transparente com execução JavaScript na borda, acelerado por eBPF Sockmap e TLS MITM dinâmico. Compatível com a **API do Cloudflare Workers** — execute seus workers localmente, na borda da rede, sem vendor lock-in.
+**Sonic** é uma **plataforma de execução de lógica sobre qualquer dado que viaja na rede**. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatível com a **API do Cloudflare Workers** — execute seus workers localmente, na borda da rede, sem vendor lock-in.
+
+## 🔮 The Vision
+
+O Sonic se transforma de "mais um proxy JS" para uma **plataforma de execução de lógica sobre QUALQUER dado da rede**, com três pilares fundamentais:
+
+1. **Qualquer canal**: Protocolo-agnóstico (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC)
+2. **Qualquer linguagem**: JavaScript (Goja), WebAssembly (Rust, Go, C), nativos via stdin/stdout
+3. **Estado partilhado**: KV Store persistente (bbolt) para todos os workers, independentemente de linguagem/protocolo
 
 ![ Presentation](assets/comparacao.png)
 
@@ -21,39 +29,77 @@
 ![tation](assets/teste.png)
 ---
 
-## ⚡ Instalação Rápida (2 comandos)
+## ⚡ Instalação Rápida
 
-### Método 1: Binário pré-compilado (recomendado)
+---
 
-```bash
-# Baixe para sua arquitetura
-wget https://github.com/manassesbinga/sonic/releases/download/v0.1.0/sonic-linux-amd64.tar.gz
-
-# Extraia e instale globalmente
-tar -xzf sonic-linux-amd64.tar.gz
-sudo ./install.sh
-
-# Pronto!
-sonic --help
+## Estrutura dos Scripts
+Todos os scripts estão organizados na pasta `scripts/`:
+```
+scripts/
+├── build-windows.ps1  # Compila para Windows
+├── build-linux.sh      # Compila para Linux
+├── windows/
+│   ├── install.ps1     # Instalação completa Windows (baixa + instala)
+│   └── uninstall.ps1   # Desinstala Windows
+└── linux/
+    ├── install.sh      # Instalação completa Linux (baixa + instala)
+    └── uninstall.sh    # Desinstala Linux
 ```
 
-| Arquivo | Plataforma |
-|---------|------------|
-| `sonic-linux-amd64.tar.gz` | Linux x86_64 |
-| `sonic-linux-arm64.tar.gz` | Linux ARM64 (Raspberry Pi, etc) |
+---
 
-### Método 2: Via Go (se tiver Go instalado)
+### Windows
+#### Opção 1: Instalar versão latest (online)
+Abra o PowerShell como **ADMINISTRADOR** e execute:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/manassesbinga/sonic/main/scripts/windows/install.ps1' -OutFile 'install-sonic.ps1'; .\install-sonic.ps1 -Version latest"
+```
 
+#### Opção 2: Compilar e instalar local
+```powershell
+# Compila (opcionalmente com -Release para otimizado)
+.\scripts\build-windows.ps1 -Release
+
+# Instala o binário local
+.\scripts\windows\install.ps1
+```
+
+**Desinstalação:**
+```powershell
+.\scripts\windows\uninstall.ps1
+```
+
+---
+
+### Linux
+#### Opção 1: Instalar versão latest (online)
+```bash
+curl -fsSL https://raw.githubusercontent.com/manassesbinga/sonic/main/scripts/linux/install.sh -o install-sonic.sh
+chmod +x install-sonic.sh
+sudo ./install-sonic.sh --version latest
+```
+
+#### Opção 2: Compilar e instalar local
+```bash
+# Compila (opcionalmente com --release para otimizado)
+chmod +x scripts/build-linux.sh
+./scripts/build-linux.sh --release
+
+# Instala o binário local
+sudo ./scripts/linux/install.sh
+```
+
+**Desinstalação:**
+```bash
+sudo ./scripts/linux/uninstall.sh
+```
+
+---
+
+### Método Alternativo: Via Go (qualquer SO)
 ```bash
 go install github.com/manassesbinga/sonic@latest
-```
-
-### Método 3: Do código fonte
-
-```bash
-git clone https://github.com/manassesbinga/sonic.git
-cd sonic
-sudo ./install.sh
 ```
 
 ---
@@ -107,17 +153,7 @@ sonic run minha_api     # Testa o worker
 sonic dev               # Desenvolvimento com auto-reload
 ```
 
----
 
-## 🗑️ Desinstalar
-
-```bash
-sudo ./uninstall.sh
-# ou
-sudo rm /usr/local/bin/sonic
-```
-
----
 
 ## Architecture
 
@@ -275,6 +311,35 @@ function onResponse(response) {
 | `jwtVerify(token, secret)` | JWT verification |
 | `require("module")` | Local modules from `./modules/` |
 | `module.exports` | Node.js-style module exports |
+| `kv` | KV Store persistente (bbolt) para estado partilhado |
+
+### KV Store API (estado partilhado)
+Workers JavaScript podem ler/escrever no KV Store persistente:
+```javascript
+function onTraffic(request) {
+  const ip = request.headers.get("X-Real-IP");
+  
+  // Ler do KV
+  const count = kv.get(`rate:${ip}`) || "0";
+  
+  if (parseInt(count) > 100) {
+    return new Response("Rate limited", { status: 429 });
+  }
+  
+  // Escrever no KV
+  kv.set(`rate:${ip}`, (parseInt(count) + 1).toString());
+  
+  return request;
+}
+```
+
+Métodos disponíveis:
+- `kv.get(key)` → Retorna o valor (string) ou ""
+- `kv.set(key, value)` → Armazena o valor
+- `kv.delete(key)` → Remove a chave
+- `kv.exists(key)` → Verifica se a chave existe
+- `kv.keys()` → Retorna array com todas as chaves
+- `kv.clear()` → Limpa todo o KV Store
 
 ### require() — Local Modules
 
@@ -510,6 +575,50 @@ make docker-run  # Run via Docker Compose
 - Hot-reload without restart
 
 ---
+
+## 🚧 Roadmap Público
+
+### v0.2 — Observability
+- [ ] OpenTelemetry traces + Prometheus metrics
+- [ ] Grafana dashboard incluído no `extras/grafana/`
+- [ ] Structured logging (JSON)
+- [ ] Endpoint `/metrics` para Prometheus
+
+### v0.3 — Storage
+- [x] **KV Store nativo (bbolt)** (embutido, zero dependências externas)
+- [ ] Worker-level caching API
+- [ ] TTL (Time-To-Live) para entradas KV
+- [ ] Backup/restore do KV Store
+
+### v0.4 — Clustering
+- [ ] Cluster mode via `hashicorp/memberlist` (gossip protocol)
+- [ ] Distributed rate limiting
+- [ ] Workers sincronizados entre nós
+- [ ] KV Store distribuído
+
+### v0.5 — Runtime
+- [ ] **WebAssembly worker support** (Rust, Go, C, AssemblyScript)
+- [ ] Worker pipeline/composition (declarativo via `sonic.yaml`)
+- [ ] Native workers via stdin/stdout
+- [ ] Testing framework para workers integrado
+
+### v1.0 — Production Ready
+- [ ] Full Cloudflare Workers API compatibility
+- [ ] Security audit
+- [ ] Load test suite (alvo: 50k req/s)
+- [ ] mTLS + Certificate Pinning programático
+- [ ] Cluster mode production-ready
+
+---
+
+## O que faz um sénior parar e estrelar? 🤩
+
+A combinação **eBPF + WASM workers + KV distribuído** não existe em nenhum projeto open-source! O Sonic é o único proxy onde podes:
+- Escrever um worker em Rust (compilado para WASM)
+- Compartilhar estado com um worker em JavaScript
+- Interceptar pacotes DNS e HTTP no mesmo pipeline
+- Tudo isso na velocidade de kernel via eBPF!
+
 ---
 
 ## License

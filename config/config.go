@@ -59,6 +59,22 @@ type Config struct {
 		// Format is "json" or "text" (default: "text").
 		Format string `mapstructure:"format"`
 	} `mapstructure:"logging"`
+
+	// Telemetry configures observability (OpenTelemetry + Prometheus).
+	Telemetry struct {
+		// Enabled enables the telemetry system (default: false).
+		Enabled bool `mapstructure:"enabled"`
+		// Traces enables OpenTelemetry tracing (default: true).
+		Traces bool `mapstructure:"traces"`
+		// TracesEndpoint is the OTLP HTTP endpoint (default: "http://localhost:4318").
+		TracesEndpoint string `mapstructure:"traces_endpoint"`
+		// Metrics enables Prometheus metrics export (default: true).
+		Metrics bool `mapstructure:"metrics"`
+		// MetricsPath is the HTTP path for Prometheus metrics (default: "/metrics").
+		MetricsPath string `mapstructure:"metrics_path"`
+		// MetricsPort is the HTTP port for the metrics server (default: 9090).
+		MetricsPort int `mapstructure:"metrics_port"`
+	} `mapstructure:"telemetry"`
 }
 
 // LoadConfig reads configuration from a YAML file and environment variables.
@@ -78,6 +94,12 @@ func LoadConfig(configPath string) (*Config, error) {
 	cfg.Runtime.Failsafe = "bypass"
 	cfg.Logging.Level = "info"
 	cfg.Logging.Format = "text"
+	cfg.Telemetry.Enabled = false
+	cfg.Telemetry.Traces = true
+	cfg.Telemetry.TracesEndpoint = "http://localhost:4318"
+	cfg.Telemetry.Metrics = true
+	cfg.Telemetry.MetricsPath = "/metrics"
+	cfg.Telemetry.MetricsPort = 9090
 
 	viper.Reset()
 
@@ -151,6 +173,14 @@ bypass_domains:
 logging:
   level: "info"
   format: "text"
+
+telemetry:
+  enabled: false
+  traces: true
+  traces_endpoint: "http://localhost:4318"
+  metrics: true
+  metrics_path: "/metrics"
+  metrics_port: 9090
 `
 	filePath := filepath.Join(dir, "sonic.yaml")
 	return os.WriteFile(filePath, []byte(content), 0644)

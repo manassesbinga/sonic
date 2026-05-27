@@ -12,6 +12,7 @@ import (
 	"github.com/manassesbinga/sonic/mitm"
 	"github.com/manassesbinga/sonic/proxy"
 	"github.com/manassesbinga/sonic/runtime"
+	"github.com/manassesbinga/sonic/telemetry"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
@@ -33,6 +34,22 @@ then starts listening for transparent proxy connections.`,
 
 		if mode != "" {
 			cfg.Mode = mode
+		}
+
+		if cfg.Telemetry.Enabled {
+			telCfg := telemetry.DefaultTelemetryConfig()
+			telCfg.TracesEnabled = cfg.Telemetry.Traces
+			telCfg.TracesEndpoint = cfg.Telemetry.TracesEndpoint
+			telCfg.MetricsEnabled = cfg.Telemetry.Metrics
+			telCfg.MetricsPath = cfg.Telemetry.MetricsPath
+			telCfg.MetricsPort = cfg.Telemetry.MetricsPort
+			telCfg.LogFormat = cfg.Logging.Format
+			telCfg.LogLevel = cfg.Logging.Level
+			if err := telemetry.InitFromConfig(telCfg); err != nil {
+				warn(fmt.Sprintf("telemetry init failed: %v (continuing without observability)", err))
+			} else {
+				info("telemetry enabled — traces: " + Bold(cfg.Telemetry.TracesEndpoint) + " | metrics: " + Bold(fmt.Sprintf(":%d%s", cfg.Telemetry.MetricsPort, cfg.Telemetry.MetricsPath)))
+			}
 		}
 
 		jsCode, err := readAndUnifyFunctions("./functions")
@@ -76,6 +93,7 @@ then starts listening for transparent proxy connections.`,
 		fmt.Println()
 		info("shutting down gracefully...")
 		transparentProxy.Stop()
+		telemetry.Shutdown()
 		success("Sonic stopped")
 	},
 }
@@ -96,6 +114,22 @@ reloads the JS runtime pool without stopping the proxy.`,
 
 		if mode != "" {
 			cfg.Mode = mode
+		}
+
+		if cfg.Telemetry.Enabled {
+			telCfg := telemetry.DefaultTelemetryConfig()
+			telCfg.TracesEnabled = cfg.Telemetry.Traces
+			telCfg.TracesEndpoint = cfg.Telemetry.TracesEndpoint
+			telCfg.MetricsEnabled = cfg.Telemetry.Metrics
+			telCfg.MetricsPath = cfg.Telemetry.MetricsPath
+			telCfg.MetricsPort = cfg.Telemetry.MetricsPort
+			telCfg.LogFormat = cfg.Logging.Format
+			telCfg.LogLevel = cfg.Logging.Level
+			if err := telemetry.InitFromConfig(telCfg); err != nil {
+				warn(fmt.Sprintf("telemetry init failed: %v (continuing without observability)", err))
+			} else {
+				info("telemetry enabled — traces: " + Bold(cfg.Telemetry.TracesEndpoint) + " | metrics: " + Bold(fmt.Sprintf(":%d%s", cfg.Telemetry.MetricsPort, cfg.Telemetry.MetricsPath)))
+			}
 		}
 
 		_ = os.MkdirAll("./functions", 0755)
@@ -183,6 +217,7 @@ reloads the JS runtime pool without stopping the proxy.`,
 		fmt.Println()
 		info("shutting down gracefully...")
 		transparentProxy.Stop()
+		telemetry.Shutdown()
 		success("Sonic stopped")
 	},
 }
