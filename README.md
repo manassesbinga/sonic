@@ -1,4 +1,6 @@
 
+just a quick update: I haven't been able to work on my project since I left the company this month. I will get back to it as soon as possible. Thanks for understanding!
+
 # Sonic — Multi-Language, Multi-Protocol Edge Engine
 
 ![Sonic Presentation](assets/logo.png)
