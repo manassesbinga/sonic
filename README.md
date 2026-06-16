@@ -30,10 +30,10 @@
         <img src="assets/webui_wsl_walk_1781620376227.webp" alt="Sonic WebUI Demo under Load in WSL 2" width="100%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
       </p>
       <p><b>Welcome to Sonic!</b> Select a language tab below or use the sidebar menu on the left to navigate directly to any technical section.</p>
-      <p><b>Sonic</b> is a <b>platform for running logic over any network data</b>. Transparent L7 proxy, eBPF-accelerated, with support for multiple languages (JavaScript, WebAssembly) and protocols (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatible with <b>Cloudflare Workers API</b> — run your workers locally, at the network edge, without vendor lock-in.</p>
+      <p><b>Sonic</b> is a <b>platform for running logic over any network data</b>. Transparent L7 proxy, eBPF-accelerated, with support for multiple languages (JavaScript, WebAssembly) and protocols (HTTP, HTTPS, WebSocket, gRPC, TCP). Compatible with <b>Cloudflare Workers API</b> — run your workers locally, at the network edge, without vendor lock-in.</p>
       <hr style="border: 0; border-top: 1px solid #334155;">
       <p><b>Bem-vindo ao Sonic!</b> Selecione a aba de idioma abaixo ou use o menu lateral à esquerda para navegar diretamente para qualquer seção técnica.</p>
-      <p>O <b>Sonic</b> é uma <b>plataforma para execução de lógica sobre qualquer dado de rede</b>. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatível com a <b>API de Cloudflare Workers</b> — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).</p>
+      <p>O <b>Sonic</b> é uma <b>plataforma para execução de lógica sobre qualquer dado de rede</b>. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, HTTPS, WebSocket, gRPC, TCP). Compatível com a <b>API de Cloudflare Workers</b> — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).</p>
     </td>
   </tr>
 </table>
@@ -65,7 +65,7 @@
 
 Sonic transforms from "just another JS proxy" to a **platform for running logic over ANY network data**, with three fundamental pillars:
 
-1. **Any channel**: Protocol-agnostic (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC)
+1. **Any channel**: Protocol-agnostic (HTTP, HTTPS, WebSocket, gRPC, TCP; with UDP, DNS, and QUIC planned in the roadmap)
 2. **Any language**: JavaScript (Goja), WebAssembly (Rust, Go, C), native via stdin/stdout
 3. **Shared state**: Persistent KV Store (bbolt) for all workers, regardless of language/protocol
 
@@ -773,6 +773,11 @@ make docker-run  # Run via Docker Compose
 - [ ] Worker pipeline/composition (declarative via `sonic.yaml`)
 - [ ] Integrated testing framework for workers
 
+### v0.6 — UDP, DNS & QUIC (Roadmap)
+- [ ] **UDP Transparent Proxying**: Virtual connection tracking & UDP socket routing.
+- [ ] **DNS Interception**: Parse binary DNS queries & dynamic address routing.
+- [ ] **QUIC & HTTP/3 MITM Decryption**: Stream multiplexing over UDP.
+
 ---
 
 ## 🛠️ How Multi-Language & Multi-Protocol Work (The Truth)
@@ -858,7 +863,7 @@ Intelligent caching gateway for LLM APIs (OpenAI/Anthropic).
 The **eBPF + WASM workers + distributed KV** combination doesn't exist in any open-source project! Sonic is the only proxy where you can:
 - Write a worker in Rust (compiled to WASM)
 - Share state with a JavaScript worker
-- Intercept DNS and HTTP packets in the same pipeline
+- Intercept HTTP and TCP packets in the same pipeline
 - All this at kernel speed via eBPF!
 
 ---
@@ -876,7 +881,7 @@ MIT — 2026
 # Sonic — Motor de Borda Multi-Linguagem e Multi-Protocolo
 
 
-O **Sonic** é uma **plataforma para execução de lógica sobre qualquer dado de rede**. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatível com a **API de Cloudflare Workers** — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).
+O **Sonic** é uma **plataforma para execução de lógica sobre qualquer dado de rede**. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, HTTPS, WebSocket, gRPC, TCP). Compatível com a **API de Cloudflare Workers** — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).
 
 ---
 
@@ -884,7 +889,7 @@ O **Sonic** é uma **plataforma para execução de lógica sobre qualquer dado d
 
 O Sonic transforma-se de "apenas mais um proxy JS" em uma **plataforma para rodar lógica sobre QUALQUER dado de rede**, com três pilares fundamentais:
 
-1. **Qualquer canal**: Agnóstico a protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC)
+1. **Qualquer canal**: Agnóstico a protocolos (HTTP, HTTPS, WebSocket, gRPC, TCP; com UDP, DNS e QUIC planejados no roadmap)
 2. **Qualquer linguagem**: JavaScript (Goja), WebAssembly (Rust, Go, C), nativo via stdin/stdout
 3. **Estado compartilhado**: KV Store persistente (bbolt) comum a todos os workers, independente de linguagem/protocolo
 
@@ -1525,7 +1530,7 @@ O Sonic Engine atinge latências na ordem de microssegundos em plataformas Linux
 A combinação de **eBPF + workers WASM + KV distribuído** não existe em nenhum projeto open-source! O Sonic é o único proxy onde você pode:
 - Escrever um worker em Rust (compilado para WASM)
 - Compartilhar estado com um worker JavaScript
-- Interceptar pacotes DNS e HTTP no mesmo pipeline
+- Interceptar pacotes HTTP e TCP no mesmo pipeline
 - Tudo isso em velocidade de kernel via eBPF!
 
 ---

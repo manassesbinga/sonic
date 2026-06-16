@@ -521,7 +521,7 @@ func getWorkerProtocol(name string) string {
 	case ".wasm", ".go", ".rs", ".c":
 		return "HTTP / HTTPS / WASM"
 	default:
-		return "Multi-Protocol (TCP/UDP/HTTP)"
+		return "Multi-Protocol (TCP/HTTP)"
 	}
 }
 
