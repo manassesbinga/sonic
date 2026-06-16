@@ -21,7 +21,7 @@ import (
 	"github.com/manassesbinga/sonic/webui"
 )
 
-var Version = "1.3.0"
+var Version = "1.4.0"
 
 func Execute() {
 	// Determinar o diretório do executável e setar como diretório de trabalho se for Windows Service

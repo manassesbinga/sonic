@@ -206,6 +206,44 @@ func (d *Database) createTables() error {
 			tokenize='porter'
 		);
 	`)
+	if err != nil {
+		return err
+	}
+
+	// 5. Tabela de DNS Records (CRUD)
+	_, err = d.db.Exec(`
+		CREATE TABLE IF NOT EXISTS dns_records (
+			id TEXT PRIMARY KEY,
+			domain TEXT,
+			type TEXT,
+			value TEXT,
+			ttl INTEGER
+		);
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 6. Tabela de UDP Routing Rules (CRUD)
+	_, err = d.db.Exec(`
+		CREATE TABLE IF NOT EXISTS udp_rules (
+			id TEXT PRIMARY KEY,
+			listen_port INTEGER,
+			target TEXT,
+			timeout INTEGER
+		);
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 7. Tabela de QUIC Settings (CRUD)
+	_, err = d.db.Exec(`
+		CREATE TABLE IF NOT EXISTS quic_settings (
+			key TEXT PRIMARY KEY,
+			value TEXT
+		);
+	`)
 	return err
 }
 

@@ -588,7 +588,14 @@ func (e *JSEngine) setupBridges(vm *goja.Runtime) {
 			bodyReader = strings.NewReader(bodyStr)
 		}
 
-		req, err := http.NewRequest(method, urlStr, bodyReader)
+		ctx := context.Background()
+		if val := vm.Get("__current_ctx"); val != nil {
+			if c, ok := val.Export().(context.Context); ok {
+				ctx = c
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, method, urlStr, bodyReader)
 		if err != nil {
 			return failRes
 		}
@@ -634,6 +641,10 @@ func (e *JSEngine) Call(funcName string, args ...interface{}) (goja.Value, error
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), e.timeoutMS)
+	defer cancel()
+	vm.Set("__current_ctx", ctx)
+	defer vm.Set("__current_ctx", goja.Undefined())
 
 	var execErr error
 	var resultVal goja.Value
@@ -730,6 +741,10 @@ func (e *JSEngine) RunOnTraffic(req *Request) (*TrafficResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), e.timeoutMS)
+	defer cancel()
+	vm.Set("__current_ctx", ctx)
+	defer vm.Set("__current_ctx", goja.Undefined())
 	vm.Set("__current_req_id", req.ID)
 	defer vm.Set("__current_req_id", goja.Undefined())
 
@@ -862,6 +877,10 @@ func (e *JSEngine) RunOnResponse(resp *Response) (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), e.timeoutMS)
+	defer cancel()
+	vm.Set("__current_ctx", ctx)
+	defer vm.Set("__current_ctx", goja.Undefined())
 	vm.Set("__current_req_id", resp.ID)
 	defer vm.Set("__current_req_id", goja.Undefined())
 

@@ -83,11 +83,32 @@ Sonic transforms from "just another JS proxy" to a **platform for running logic 
 
 ---
 
-# 📊 Results Presentation & Workers CRUD (Sonic v1.3.0)
+# 📊 Results Presentation & Workers CRUD (Sonic v1.4.0)
 
 This document records the completion of the visual Edge Workers CRUD implementation from the WebUI, as well as the system validation under massive stress tests and high concurrent load.
 
 Below are all details and evidence structured in collapsible tabs for easy navigation:
+
+<details>
+<summary><b>🎬 Version 1.4.0 Changelog & Video Demonstration</b></summary>
+<br>
+
+### 📺 Video Demonstration
+Watch the system in action: [Sonic Engine v1.4.0 Video Demonstration](https://youtu.be/PzQM_MJUqRk)
+
+### 📋 Changelog (v1.4.0)
+* **Added**:
+  - CRUD endpoints and management UI for DNS static forge records, UDP port routes, and QUIC decryption bypass rules.
+  - Complete AMOLED Pure Black visual design overhaul of the administrative WebUI.
+  - High-performance context timeouts for Goja Outbound Fetch requests.
+  - Failsafe queue wait timeout for on-demand WASM VM module leasing under heavy loads.
+* **Changed**:
+  - Refactored validation regular expressions to be pre-compiled globally in `webui/server.go` for improved API throughput.
+  - Reduced Transparent Proxy initial TLS handshake read deadline from 5s to 2s to mitigate slow connection DoS (Slowloris).
+  - Permitted loopback CSRF Referer/Origin headers without requiring explicit port matching.
+* **Fixed**:
+  - Fixed smart payload restoration in Native worker engine, safely preserving user-applied payload mutations and clear-body instructions.
+</details>
 
 <details>
 <summary><b>🛠️ Tab 1: Implemented Changes & Features</b></summary>
@@ -124,7 +145,7 @@ function onTraffic(request) {
         data.push({ id: i, metric: Math.random() * 100, status: "active" });
     }
     request.headers.set('X-Sonic-Data-Processed', data.length.toString());
-    request.headers.set('X-Sonic-Engine', 'v1.3.0');
+    request.headers.set('X-Sonic-Engine', 'v1.4.0');
     return request;
 }
 ```
@@ -905,11 +926,32 @@ O Sonic transforma-se de "apenas mais um proxy JS" em uma **plataforma para roda
 
 ![Teste](assets/teste.png)
 
-# 📊 Apresentação de Resultados e CRUD de Workers (Sonic v1.3.0)
+# 📊 Apresentação de Resultados e CRUD de Workers (Sonic v1.4.0)
 
 Este documento registra a conclusão do desenvolvimento do CRUD visual de Edge Workers a partir da WebUI, bem como a validação do sistema sob teste de estresse e carga concorrente em grande escala.
 
 Abaixo estão todos os detalhes e evidências estruturados em abas colapsáveis para fácil navegação:
+
+<details>
+<summary><b>🎬 Changelog da Versão 1.4.0 e Demonstração em Vídeo</b></summary>
+<br>
+
+### 📺 Demonstração em Vídeo
+Assista ao funcionamento do sistema: [Sonic Engine v1.4.0 - Demonstração em Vídeo](https://youtu.be/PzQM_MJUqRk)
+
+### 📋 Registro de Alterações (Changelog v1.4.0)
+* **Adicionado**:
+  - Endpoints CRUD e painel de controle WebUI para registros DNS estáticos, rotas de portas UDP e regras de desvio (bypass) de descriptografia QUIC.
+  - Redesenho completo da interface administrativa WebUI com tema AMOLED Pure Black.
+  - Timeouts de contexto de alta performance para chamadas Goja Outbound Fetch.
+  - Limite de tempo de espera (queue wait timeout) para empréstimo de instâncias WASM virtuais sob carga.
+* **Alterado**:
+  - Expressões regulares de validação pré-compiladas globalmente em `webui/server.go` para maximizar a taxa de transferência da API.
+  - Prazo limite (read deadline) do handshake TLS inicial no proxy transparente reduzido de 5s para 2s para mitigar ataques Slowloris.
+  - Liberação de portas nos cabeçalhos de Referer/Origin para requisições anti-CSRF vindas de localhost/loopback.
+* **Corrigido**:
+  - Correção na lógica de restauração inteligente do motor nativo para respeitar alterações e limpezas completas do corpo do pacote.
+</details>
 
 <details>
 <summary><b>🛠️ Aba 1: Alterações e Funcionalidades Implementadas</b></summary>
@@ -951,7 +993,7 @@ function onTraffic(request) {
         data.push({ id: i, metric: Math.random() * 100, status: "active" });
     }
     request.headers.set('X-Sonic-Data-Processed', data.length.toString());
-    request.headers.set('X-Sonic-Engine', 'v1.3.0');
+    request.headers.set('X-Sonic-Engine', 'v1.4.0');
     return request;
 }
 ```

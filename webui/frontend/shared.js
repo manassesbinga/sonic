@@ -142,7 +142,7 @@ if (isDesignMode) {
     ]);
 
     getMockData('mock_logs', [
-        { timestamp: Date.now() - 30000, level: "INFO", message: "Sonic Edge Engine v1.3.0 starting..." },
+        { timestamp: Date.now() - 30000, level: "INFO", message: "Sonic Edge Engine v1.4.0 starting..." },
         { timestamp: Date.now() - 28000, level: "INFO", message: "Loading config file: sonic_test.yaml" },
         { timestamp: Date.now() - 25000, level: "INFO", message: "Kernel Socksmap support verified (eBPF emulation active)" },
         { timestamp: Date.now() - 20000, level: "INFO", message: "Admin interface listening on http://localhost:9092" },
@@ -489,6 +489,7 @@ function getActivePageName() {
     if (path.endsWith('logs.html')) return 'logs';
     if (path.endsWith('audit.html')) return 'audit';
     if (path.endsWith('security.html')) return 'security';
+    if (path.endsWith('protocols.html')) return 'protocols';
     return 'dashboard'; // Default para index.html ou "/"
 }
 
@@ -641,6 +642,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 CVE Scanner
             </a>
+            <a href="protocols.html" id="btn-tab-protocols" class="tab-btn ${activePage === 'protocols' ? 'active' : ''}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                Protocols
+            </a>
         </nav>
         
         <div id="ebpf-sidebar-status" style="padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color); font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; background-color: #060608;">
@@ -654,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="btn-sidebar-action" onclick="window.logout()">Trancar</button>
                 <button class="btn-sidebar-action btn-danger" onclick="window.shutdownServer()">Desligar</button>
             </div>
-            <div class="version-text">Sonic Engine v1.3.0</div>
+            <div class="version-text">Sonic Engine v1.4.0</div>
         </div>
     `;
 
@@ -682,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const footer = document.createElement('footer');
-    footer.innerHTML = `<p>Sonic Engine v1.3.0 — Multi-Language Edge Computing Proxy</p>`;
+    footer.innerHTML = `<p>Sonic Engine v1.4.0 — Multi-Language Edge Computing Proxy</p>`;
 
     contentWrapper.appendChild(main);
     contentWrapper.appendChild(footer);
