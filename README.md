@@ -182,6 +182,10 @@ The visual video walkthrough demonstrating tab transitions and real-time graph r
 
 ## ⚡ Quick Installation
 
+> 📥 **Download Pre-compiled Binaries / Baixar Binários Pré-compilados:**  
+> You can download the latest pre-compiled binaries for **Linux** (amd64/arm64) and **Windows** (amd64) directly from the **[GitHub Releases](https://github.com/manassesbinga/sonic/releases)** page.  
+> Você pode baixar os binários pré-compilados mais recentes para **Linux** (amd64/arm64) e **Windows** (amd64) diretamente da página de **[Releases do GitHub](https://github.com/manassesbinga/sonic/releases)**.
+
 ---
 
 ## Script Structure
