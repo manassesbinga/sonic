@@ -43,6 +43,8 @@
                 <thead>
                     <tr>
                         <th>Worker Name</th>
+                        <th>Linguagem</th>
+                        <th>Protocolo</th>
                         <th>Size</th>
                         <th>Active Handlers</th>
                         <th style="text-align: right; padding-right: 1.5rem;">Ações</th>
@@ -50,7 +52,7 @@
                 </thead>
                 <tbody id="workers-table-body">
                     <tr>
-                        <td colspan="4" style="text-align: center; color: var(--text-muted);">Loading workers...</td>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted);">Loading workers...</td>
                     </tr>
                 </tbody>
             </table>
@@ -80,7 +82,7 @@
             if (!tbody) return;
 
             if (!workers || workers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No worker files found in functions/</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No worker files found in functions/</td></tr>`;
                 return;
             }
 
@@ -90,9 +92,17 @@
                 if (w.onResponse) handlers.push('<span style="color: var(--color-success)">onResponse</span>');
                 const handlersStr = handlers.length > 0 ? handlers.join(', ') : '<span style="color: var(--text-muted)">none</span>';
 
+                // Determinar badge para a linguagem
+                let langBadgeClass = "warning";
+                if (w.language === "JavaScript") langBadgeClass = "primary";
+                else if (w.language === "WebAssembly") langBadgeClass = "success";
+                else if (w.language === "Python" || w.language === "Ruby" || w.language === "Shell Script") langBadgeClass = "info";
+
                 return `
                     <tr>
                         <td style="font-weight: 500; font-family: 'Outfit';">${window.escapeHTML(w.name)}</td>
+                        <td><span class="status-badge ${langBadgeClass}" style="font-size: 0.75rem; padding: 0.15rem 0.4rem;">${window.escapeHTML(w.language || '-')}</span></td>
+                        <td style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">${window.escapeHTML(w.protocol || '-')}</td>
                         <td style="color: var(--text-muted);">${window.escapeHTML(w.size)}</td>
                         <td>${handlersStr}</td>
                         <td style="text-align: right; padding-right: 1.5rem;">

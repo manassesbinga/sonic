@@ -630,6 +630,20 @@ tr:hover td {
     border-style: solid;
 }
 
+.status-badge.primary {
+    background-color: rgba(99, 102, 241, 0.12);
+    color: var(--color-primary);
+    border-color: rgba(99, 102, 241, 0.25);
+    border-style: solid;
+}
+
+.status-badge.info {
+    background-color: rgba(6, 182, 212, 0.12);
+    color: var(--color-secondary);
+    border-color: rgba(6, 182, 212, 0.25);
+    border-style: solid;
+}
+
 .exec-duration {
     font-weight: 600;
     color: var(--text-color);

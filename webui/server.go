@@ -471,6 +471,8 @@ type WorkerInfo struct {
 	Size       string `json:"size"`
 	OnTraffic  bool   `json:"onTraffic"`
 	OnResponse bool   `json:"onResponse"`
+	Language   string `json:"language"`
+	Protocol   string `json:"protocol"`
 }
 
 func isValidWorkerFilename(name string) bool {
@@ -479,6 +481,36 @@ func isValidWorkerFilename(name string) bool {
 	}
 	// Permite apenas formatos suportados pelo Sonic para evitar escrita de arquivos arbitrários
 	return strings.HasSuffix(name, ".js") || strings.HasSuffix(name, ".py") || strings.HasSuffix(name, ".rb") || strings.HasSuffix(name, ".sh") || strings.HasSuffix(name, ".wasm")
+}
+
+func getWorkerLanguage(name string) string {
+	ext := strings.ToLower(filepath.Ext(name))
+	switch ext {
+	case ".js":
+		return "JavaScript"
+	case ".py":
+		return "Python"
+	case ".rb":
+		return "Ruby"
+	case ".sh":
+		return "Shell Script"
+	case ".wasm":
+		return "WebAssembly"
+	default:
+		return "Native Binary"
+	}
+}
+
+func getWorkerProtocol(name string) string {
+	ext := strings.ToLower(filepath.Ext(name))
+	switch ext {
+	case ".js":
+		return "HTTP / HTTPS"
+	case ".wasm":
+		return "HTTP / HTTPS / WASM"
+	default:
+		return "Multi-Protocol (TCP/UDP/HTTP)"
+	}
 }
 
 func (s *AdminServer) handleWorkers(w http.ResponseWriter, r *http.Request) {
@@ -511,7 +543,7 @@ func (s *AdminServer) handleWorkers(w http.ResponseWriter, r *http.Request) {
 
 		var workers []WorkerInfo
 		for _, f := range files {
-			if f.IsDir() || !strings.HasSuffix(f.Name(), ".js") {
+			if f.IsDir() || !isValidWorkerFilename(f.Name()) {
 				continue
 			}
 
@@ -536,6 +568,8 @@ func (s *AdminServer) handleWorkers(w http.ResponseWriter, r *http.Request) {
 				Size:       sizeStr,
 				OnTraffic:  hasOnTraffic,
 				OnResponse: hasOnResponse,
+				Language:   getWorkerLanguage(f.Name()),
+				Protocol:   getWorkerProtocol(f.Name()),
 			})
 		}
 
