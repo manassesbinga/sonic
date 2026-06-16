@@ -1396,7 +1396,7 @@ function onResponse(response) {
 			}{
 				{"O que e o Sonic Engine?", "Sonic Engine e um proxy reverso e servidor de Edge Computing de alto desempenho escrito em Go e Goja JS VM."},
 				{"Como configurar um worker?", "Crie um arquivo JavaScript na pasta functions contendo a funcao onTraffic(request) e registre o mesmo na aba Edge Workers da WebUI."},
-				{"Qual a versao atual?", "A versao atual do Sonic e 1.1.3 executando em arquitetura distribuida."},
+				{"Qual a versao atual?", "A versao atual do Sonic e 1.3.0 executando em arquitetura distribuida."},
 			}
 			for _, qa := range demoQA {
 				uuid := fmt.Sprintf("demo-qa-%d", time.Now().UnixNano())

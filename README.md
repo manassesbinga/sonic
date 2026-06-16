@@ -83,7 +83,7 @@ Sonic transforms from "just another JS proxy" to a **platform for running logic 
 
 ---
 
-# 📊 Results Presentation & Workers CRUD (Sonic v1.1.3)
+# 📊 Results Presentation & Workers CRUD (Sonic v1.3.0)
 
 This document records the completion of the visual Edge Workers CRUD implementation from the WebUI, as well as the system validation under massive stress tests and high concurrent load.
 
@@ -124,7 +124,7 @@ function onTraffic(request) {
         data.push({ id: i, metric: Math.random() * 100, status: "active" });
     }
     request.headers.set('X-Sonic-Data-Processed', data.length.toString());
-    request.headers.set('X-Sonic-Engine', 'v1.1.3');
+    request.headers.set('X-Sonic-Engine', 'v1.3.0');
     return request;
 }
 ```
@@ -900,7 +900,7 @@ O Sonic transforma-se de "apenas mais um proxy JS" em uma **plataforma para roda
 
 ![Teste](assets/teste.png)
 
-# 📊 Apresentação de Resultados e CRUD de Workers (Sonic v1.1.3)
+# 📊 Apresentação de Resultados e CRUD de Workers (Sonic v1.3.0)
 
 Este documento registra a conclusão do desenvolvimento do CRUD visual de Edge Workers a partir da WebUI, bem como a validação do sistema sob teste de estresse e carga concorrente em grande escala.
 
@@ -946,7 +946,7 @@ function onTraffic(request) {
         data.push({ id: i, metric: Math.random() * 100, status: "active" });
     }
     request.headers.set('X-Sonic-Data-Processed', data.length.toString());
-    request.headers.set('X-Sonic-Engine', 'v1.1.3');
+    request.headers.set('X-Sonic-Engine', 'v1.3.0');
     return request;
 }
 ```

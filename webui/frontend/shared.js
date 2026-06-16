@@ -142,7 +142,7 @@ if (isDesignMode) {
     ]);
 
     getMockData('mock_logs', [
-        { timestamp: Date.now() - 30000, level: "INFO", message: "Sonic Edge Engine v1.1.3 starting..." },
+        { timestamp: Date.now() - 30000, level: "INFO", message: "Sonic Edge Engine v1.3.0 starting..." },
         { timestamp: Date.now() - 28000, level: "INFO", message: "Loading config file: sonic_test.yaml" },
         { timestamp: Date.now() - 25000, level: "INFO", message: "Kernel Socksmap support verified (eBPF emulation active)" },
         { timestamp: Date.now() - 20000, level: "INFO", message: "Admin interface listening on http://localhost:9092" },
@@ -654,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="btn-sidebar-action" onclick="window.logout()">Trancar</button>
                 <button class="btn-sidebar-action btn-danger" onclick="window.shutdownServer()">Desligar</button>
             </div>
-            <div class="version-text">Sonic Engine v1.1.3</div>
+            <div class="version-text">Sonic Engine v1.3.0</div>
         </div>
     `;
 
@@ -682,7 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const footer = document.createElement('footer');
-    footer.innerHTML = `<p>Sonic Engine v1.1.3 — Multi-Language Edge Computing Proxy</p>`;
+    footer.innerHTML = `<p>Sonic Engine v1.3.0 — Multi-Language Edge Computing Proxy</p>`;
 
     contentWrapper.appendChild(main);
     contentWrapper.appendChild(footer);
