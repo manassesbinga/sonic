@@ -90,24 +90,94 @@ This document records the completion of the visual Edge Workers CRUD implementat
 Below are all details and evidence structured in collapsible tabs for easy navigation:
 
 <details>
-<summary><b>🎬 Version 1.4.0 Changelog & Video Demonstration</b></summary>
+<summary><b>🎬 Full Project Changelog & Video Demonstration</b></summary>
 <br>
 
 ### 📺 Video Demonstration
 Watch the system in action: [Sonic Engine v1.4.0 Video Demonstration](https://youtu.be/PzQM_MJUqRk)
 
-### 📋 Changelog (v1.4.0)
-* **Added**:
-  - CRUD endpoints and management UI for DNS static forge records, UDP port routes, and QUIC decryption bypass rules.
-  - Complete AMOLED Pure Black visual design overhaul of the administrative WebUI.
-  - High-performance context timeouts for Goja Outbound Fetch requests.
-  - Failsafe queue wait timeout for on-demand WASM VM module leasing under heavy loads.
-* **Changed**:
-  - Refactored validation regular expressions to be pre-compiled globally in `webui/server.go` for improved API throughput.
-  - Reduced Transparent Proxy initial TLS handshake read deadline from 5s to 2s to mitigate slow connection DoS (Slowloris).
-  - Permitted loopback CSRF Referer/Origin headers without requiring explicit port matching.
-* **Fixed**:
-  - Fixed smart payload restoration in Native worker engine, safely preserving user-applied payload mutations and clear-body instructions.
+### 📋 Complete Changelog
+
+All notable changes to the Sonic project will be documented here.
+
+---
+
+## [1.4.0] - 2026-06-16
+
+### Added
+- CRUD endpoints and management UI for DNS static forge records, UDP port routes, and QUIC decryption bypass rules.
+- Complete AMOLED Pure Black visual design overhaul of the administrative WebUI.
+- High-performance context timeouts for Goja Outbound Fetch requests.
+- Failsafe queue wait timeout for on-demand WASM VM module leasing under heavy loads.
+
+### Changed
+- Refactored validation regular expressions to be pre-compiled globally in `webui/server.go` for improved API throughput.
+- Reduced Transparent Proxy initial TLS handshake read deadline from 5s to 2s to mitigate slow connection DoS (Slowloris).
+- Permitted loopback CSRF Referer/Origin headers without requiring explicit port matching.
+
+### Fixed
+- Fixed smart payload restoration in Native worker engine, safely preserving user-applied payload mutations and clear-body instructions.
+
+---
+
+## [1.3.0] - 2026-06-16
+
+### Added
+- Dynamic WebUI authorization token display in the startup console banner when configured token is empty.
+- Multi-stage Docker build targeting Go 1.25.
+- Persistence data directories (`/etc/sonic/data`) to Docker volume.
+
+### Changed
+- Standardized environment variables file template `.env.example`.
+- Updated container orchestration `docker-compose.yml` to remove legacy properties and support full port binding for telemetry and WebUI.
+
+### Fixed
+- Replaced runtime panics during Web Standard API bootstrap within the VM pool with graceful Go errors returned to the application controller.
+- Handled VM resource replenishment via non-panicking `recreateAndQueueVM` routine.
+- Cleared unwanted certificates CA and outdated binaries from local workspace.
+
+---
+
+## [1.1.2] - 2026-06-15
+
+### Added
+- **Neural Cache Compression**: Zero-dependency implementation of LZ77 sliding window (4KB dictionary) and variable-length Huffman entropy encoding.
+- Smart compression heuristics: Payloads smaller than 512 bytes are bypassed; only standard web formats (`text/*`, `application/json`, etc.) are compressed.
+- Internal metrics tracking compression savings, ratio, and original size in Cache Stats.
+
+---
+
+## [1.1.1] - 2026-06-15
+
+### Added
+- **Web Security Hardening**: Integrated Strict HTTP Response Headers including Strict-Transport-Security (HSTS) and Content-Security-Policy (CSP) inside dynamic middleware.
+- Cleaned query parameters containing secrets from URL logs.
+
+---
+
+## [1.1.0] - 2026-06-14
+
+### Added
+- **Security Hardening (Phase 2)**:
+  - Input validation on JS dynamic engine routing (SSRF blocker).
+  - WebUI transparent proxy connection limits (maximum 1020 concurrent connections).
+  - Sanitization of CRLF injections in headers.
+  - SQLite auditing buffer batching with `busy_timeout` configuration.
+  - Native subprocess workers pool bounding.
+  - API Keys encriptação local com cifras AES-GCM.
+
+---
+
+## [1.0.0] - 2026-06-14
+
+### Added
+- Initial Release of Sonic Engine.
+- Multi-protocol, multi-language intercepting engine (JS Goja, WASM Wazero, Native subprocesses).
+- Embedded SQLite storage with persistent Rate Limiting rules.
+- Concurrent Sandbox Interceptor for dynamic payload breakpoints.
+- AI Proxy Gateway with semantic local TF-IDF cache and OpenAI integration.
+- Minimalist monocromatic WebUI dashboard.
+- Windows Service support via SCM handler.
 </details>
 
 <details>
@@ -933,24 +1003,94 @@ Este documento registra a conclusão do desenvolvimento do CRUD visual de Edge W
 Abaixo estão todos os detalhes e evidências estruturados em abas colapsáveis para fácil navegação:
 
 <details>
-<summary><b>🎬 Changelog da Versão 1.4.0 e Demonstração em Vídeo</b></summary>
+<summary><b>🎬 Changelog Completo do Projeto e Demonstração em Vídeo</b></summary>
 <br>
 
 ### 📺 Demonstração em Vídeo
 Assista ao funcionamento do sistema: [Sonic Engine v1.4.0 - Demonstração em Vídeo](https://youtu.be/PzQM_MJUqRk)
 
-### 📋 Registro de Alterações (Changelog v1.4.0)
-* **Adicionado**:
-  - Endpoints CRUD e painel de controle WebUI para registros DNS estáticos, rotas de portas UDP e regras de desvio (bypass) de descriptografia QUIC.
-  - Redesenho completo da interface administrativa WebUI com tema AMOLED Pure Black.
-  - Timeouts de contexto de alta performance para chamadas Goja Outbound Fetch.
-  - Limite de tempo de espera (queue wait timeout) para empréstimo de instâncias WASM virtuais sob carga.
-* **Alterado**:
-  - Expressões regulares de validação pré-compiladas globalmente em `webui/server.go` para maximizar a taxa de transferência da API.
-  - Prazo limite (read deadline) do handshake TLS inicial no proxy transparente reduzido de 5s para 2s para mitigar ataques Slowloris.
-  - Liberação de portas nos cabeçalhos de Referer/Origin para requisições anti-CSRF vindas de localhost/loopback.
-* **Corrigido**:
-  - Correção na lógica de restauração inteligente do motor nativo para respeitar alterações e limpezas completas do corpo do pacote.
+### 📋 Registro de Alterações Completo
+
+Todas as alterações notáveis no projeto Sonic serão documentadas aqui.
+
+---
+
+## [1.4.0] - 2026-06-16
+
+### Adicionado
+- Endpoints CRUD e painel de controle WebUI para registros DNS estáticos, rotas de portas UDP e regras de desvio (bypass) de descriptografia QUIC.
+- Redesenho completo da interface administrativa WebUI com tema AMOLED Pure Black.
+- Timeouts de contexto de alta performance para chamadas Goja Outbound Fetch.
+- Limite de tempo de espera (queue wait timeout) para empréstimo de instâncias WASM virtuais sob carga.
+
+### Alterado
+- Expressões regulares de validação pré-compiladas globalmente em `webui/server.go` para maximizar a taxa de transferência da API.
+- Prazo limite (read deadline) do handshake TLS inicial no proxy transparente reduzido de 5s para 2s para mitigar ataques Slowloris.
+- Liberação de portas nos cabeçalhos de Referer/Origin para requisições anti-CSRF vindas de localhost/loopback.
+
+### Corrigido
+- Correção na lógica de recuperação inteligente do motor nativo para respeitar alterações e limpezas completas do corpo do pacote.
+
+---
+
+## [1.3.0] - 2026-06-16
+
+### Adicionado
+- Exibição dinâmica do token de autorização da WebUI no banner de console de inicialização quando configurado vazio.
+- Build Docker multi-stage visando Go 1.25.
+- Diretórios de dados persistentes (`/etc/sonic/data`) no volume do Docker.
+
+### Alterado
+- Padronização do arquivo de template de variáveis de ambiente `.env.example`.
+- Atualização da orquestração de containers `docker-compose.yml` para remover propriedades obsoletas e suportar ligação completa de portas para telemetria e WebUI.
+
+### Corrigido
+- Substituição de pânicos em tempo de execução durante o bootstrap da Web Standard API dentro do pool de VMs por erros Go retornados graciosamente ao controlador.
+- Tratamento de reposição de recursos de VM através da rotina sem pânico `recreateAndQueueVM`.
+- Limpeza de certificados CA não desejados e binários desatualizados do workspace local.
+
+---
+
+## [1.1.2] - 2026-06-15
+
+### Adicionado
+- **Compressão Neural de Cache**: Implementação sem dependências externas de janela deslizante LZ77 (dicionário de 4KB) e codificação de entropia Huffman de comprimento variável.
+- Heurísticas inteligentes de compressão: Payloads menores que 512 bytes são ignoradas; apenas formatos web padrão (`text/*`, `application/json`, etc.) são comprimidos.
+- Métricas internas acompanhando a economia de compressão, taxa e tamanho original em Cache Stats.
+
+---
+
+## [1.1.1] - 2026-06-15
+
+### Adicionado
+- **Endurecimento de Segurança Web**: Integração de Cabeçalhos Estritos de Resposta HTTP incluindo Strict-Transport-Security (HSTS) e Content-Security-Policy (CSP) dentro do middleware dinâmico.
+- Limpeza de parâmetros de consulta contendo segredos nos logs de URL.
+
+---
+
+## [1.1.0] - 2026-06-14
+
+### Adicionado
+- **Endurecimento de Segurança (Fase 2)**:
+  - Validação de entrada no roteamento dinâmico do motor JS (bloqueador SSRF).
+  - Limites de conexão de proxy transparente na WebUI (máximo de 1020 conexões concorrentes).
+  - Sanitização de injeções CRLF em cabeçalhos.
+  - Processamento em lote do buffer de auditoria SQLite com configuração `busy_timeout`.
+  - Limite do pool de workers de subprocesso nativos.
+  - Criptografia local de Chaves de API com cifras AES-GCM.
+
+---
+
+## [1.0.0] - 2026-06-14
+
+### Adicionado
+- Lançamento Inicial do Sonic Engine.
+- Motor de intercepção multi-protocolo e multi-linguagem (JS Goja, WASM Wazero, subprocessos nativos).
+- Armazenamento SQLite embarcado com regras persistentes de Rate Limiting.
+- Interceptador Concorrente Sandbox para breakpoints dinâmicos de payload.
+- AI Proxy Gateway com cache semântico local TF-IDF e integração OpenAI.
+- Painel WebUI minimalista monocromático.
+- Suporte a Serviço do Windows via SCM.
 </details>
 
 <details>
