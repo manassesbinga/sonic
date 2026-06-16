@@ -1,17 +1,17 @@
 :root {
-    --bg-color: #020617; /* Slate-950 profundo */
-    --surface-color: rgba(15, 23, 42, 0.65); /* Slate-900 translúcido para glassmorphism */
-    --surface-card: #0f172a; /* Slate-900 sólido */
-    --border-color: rgba(255, 255, 255, 0.08); /* Borda fina translúcida */
-    --border-active: rgba(255, 255, 255, 0.18);
-    --text-color: #f8fafc; /* Slate-50 */
-    --text-muted: #94a3b8; /* Slate-400 */
-    --color-primary: #6366f1; /* Indigo-500 */
-    --color-secondary: #06b6d4; /* Cyan-500 */
-    --color-success: #10b981; /* Emerald-500 */
-    --color-error: #ef4444; /* Red-500 */
-    --color-warning: #f59e0b; /* Amber-500 */
-    --glow-color: rgba(99, 102, 241, 0.2);
+    --bg-color: #000000; /* Preto absoluto (AMOLED) */
+    --surface-color: rgba(9, 9, 11, 0.8); /* Preto translúcido */
+    --surface-card: #09090b; /* Zinco-950 elevado */
+    --border-color: rgba(255, 255, 255, 0.05); /* Borda ultra-fina translúcida */
+    --border-active: rgba(255, 255, 255, 0.15);
+    --text-color: #f4f4f5; /* Zinco-100 */
+    --text-muted: #a1a1aa; /* Zinco-400 */
+    --color-primary: #3b82f6; /* Azul elétrico premium */
+    --color-secondary: #06b6d4; /* Cyan */
+    --color-success: #10b981; /* Esmeralda */
+    --color-error: #ef4444; /* Vermelho */
+    --color-warning: #f59e0b; /* Amber */
+    --glow-color: rgba(59, 130, 246, 0.15);
     --sidebar-width: 260px;
     --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -627,6 +627,20 @@ tr:hover td {
     background-color: rgba(245, 158, 11, 0.12);
     color: var(--color-warning);
     border-color: rgba(245, 158, 11, 0.25);
+    border-style: solid;
+}
+
+.status-badge.primary {
+    background-color: rgba(99, 102, 241, 0.12);
+    color: var(--color-primary);
+    border-color: rgba(99, 102, 241, 0.25);
+    border-style: solid;
+}
+
+.status-badge.info {
+    background-color: rgba(6, 182, 212, 0.12);
+    color: var(--color-secondary);
+    border-color: rgba(6, 182, 212, 0.25);
     border-style: solid;
 }
 

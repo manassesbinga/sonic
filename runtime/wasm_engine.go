@@ -285,17 +285,25 @@ func (we *WASMEngine) leaseModule() (api.Module, error) {
 	case mod := <-we.modulePool:
 		return mod, nil
 	default:
-		onDemand := atomic.AddInt32(&we.onDemandCount, 1)
-		if onDemand > int32(we.poolSize*maxWASMOnDemand) {
-			atomic.AddInt32(&we.onDemandCount, -1)
-			return nil, errors.New("WASM engine overloaded: too many on-demand modules")
+		// Se o pool estiver vazio, aguarda até we.timeoutMS por um módulo liberado
+		timer := time.NewTimer(we.timeoutMS)
+		defer timer.Stop()
+		select {
+		case mod := <-we.modulePool:
+			return mod, nil
+		case <-timer.C:
+			onDemand := atomic.AddInt32(&we.onDemandCount, 1)
+			if onDemand > int32(we.poolSize*maxWASMOnDemand) {
+				atomic.AddInt32(&we.onDemandCount, -1)
+				return nil, errors.New("WASM engine overloaded: too many on-demand modules (pool exhausted and wait timed out)")
+			}
+			mod, err := we.runtime.InstantiateModule(we.ctx, we.compiledModule, wazero.NewModuleConfig())
+			if err != nil {
+				atomic.AddInt32(&we.onDemandCount, -1)
+				return nil, fmt.Errorf("failed to create temp WASM module after wait: %w", err)
+			}
+			return mod, nil
 		}
-		mod, err := we.runtime.InstantiateModule(we.ctx, we.compiledModule, wazero.NewModuleConfig())
-		if err != nil {
-			atomic.AddInt32(&we.onDemandCount, -1)
-			return nil, fmt.Errorf("failed to create temp WASM module: %w", err)
-		}
-		return mod, nil
 	}
 }
 

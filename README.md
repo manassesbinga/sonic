@@ -30,10 +30,10 @@
         <img src="assets/webui_wsl_walk_1781620376227.webp" alt="Sonic WebUI Demo under Load in WSL 2" width="100%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
       </p>
       <p><b>Welcome to Sonic!</b> Select a language tab below or use the sidebar menu on the left to navigate directly to any technical section.</p>
-      <p><b>Sonic</b> is a <b>platform for running logic over any network data</b>. Transparent L7 proxy, eBPF-accelerated, with support for multiple languages (JavaScript, WebAssembly) and protocols (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatible with <b>Cloudflare Workers API</b> — run your workers locally, at the network edge, without vendor lock-in.</p>
+      <p><b>Sonic</b> is a <b>platform for running logic over any network data</b>. Transparent L7 proxy, eBPF-accelerated, with support for multiple languages (JavaScript, WebAssembly) and protocols (HTTP, HTTPS, WebSocket, gRPC, TCP). Compatible with <b>Cloudflare Workers API</b> — run your workers locally, at the network edge, without vendor lock-in.</p>
       <hr style="border: 0; border-top: 1px solid #334155;">
       <p><b>Bem-vindo ao Sonic!</b> Selecione a aba de idioma abaixo ou use o menu lateral à esquerda para navegar diretamente para qualquer seção técnica.</p>
-      <p>O <b>Sonic</b> é uma <b>plataforma para execução de lógica sobre qualquer dado de rede</b>. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatível com a <b>API de Cloudflare Workers</b> — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).</p>
+      <p>O <b>Sonic</b> é uma <b>plataforma para execução de lógica sobre qualquer dado de rede</b>. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, HTTPS, WebSocket, gRPC, TCP). Compatível com a <b>API de Cloudflare Workers</b> — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).</p>
     </td>
   </tr>
 </table>
@@ -65,7 +65,7 @@
 
 Sonic transforms from "just another JS proxy" to a **platform for running logic over ANY network data**, with three fundamental pillars:
 
-1. **Any channel**: Protocol-agnostic (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC)
+1. **Any channel**: Protocol-agnostic (HTTP, HTTPS, WebSocket, gRPC, TCP; with UDP, DNS, and QUIC planned in the roadmap)
 2. **Any language**: JavaScript (Goja), WebAssembly (Rust, Go, C), native via stdin/stdout
 3. **Shared state**: Persistent KV Store (bbolt) for all workers, regardless of language/protocol
 
@@ -83,11 +83,102 @@ Sonic transforms from "just another JS proxy" to a **platform for running logic 
 
 ---
 
-# 📊 Results Presentation & Workers CRUD (Sonic v1.1.3)
+# 📊 Results Presentation & Workers CRUD (Sonic v1.4.0)
 
 This document records the completion of the visual Edge Workers CRUD implementation from the WebUI, as well as the system validation under massive stress tests and high concurrent load.
 
 Below are all details and evidence structured in collapsible tabs for easy navigation:
+
+<details>
+<summary><b>🎬 Full Project Changelog & Video Demonstration</b></summary>
+<br>
+
+### 📺 Video Demonstration
+Watch the system in action: [Sonic Engine v1.4.0 Video Demonstration](https://youtu.be/PzQM_MJUqRk)
+
+### 📋 Complete Changelog
+
+All notable changes to the Sonic project will be documented here.
+
+---
+
+## [1.4.0] - 2026-06-16
+
+### Added
+- CRUD endpoints and management UI for DNS static forge records, UDP port routes, and QUIC decryption bypass rules.
+- Complete AMOLED Pure Black visual design overhaul of the administrative WebUI.
+- High-performance context timeouts for Goja Outbound Fetch requests.
+- Failsafe queue wait timeout for on-demand WASM VM module leasing under heavy loads.
+
+### Changed
+- Refactored validation regular expressions to be pre-compiled globally in `webui/server.go` for improved API throughput.
+- Reduced Transparent Proxy initial TLS handshake read deadline from 5s to 2s to mitigate slow connection DoS (Slowloris).
+- Permitted loopback CSRF Referer/Origin headers without requiring explicit port matching.
+
+### Fixed
+- Fixed smart payload restoration in Native worker engine, safely preserving user-applied payload mutations and clear-body instructions.
+
+---
+
+## [1.3.0] - 2026-06-16
+
+### Added
+- Dynamic WebUI authorization token display in the startup console banner when configured token is empty.
+- Multi-stage Docker build targeting Go 1.25.
+- Persistence data directories (`/etc/sonic/data`) to Docker volume.
+
+### Changed
+- Standardized environment variables file template `.env.example`.
+- Updated container orchestration `docker-compose.yml` to remove legacy properties and support full port binding for telemetry and WebUI.
+
+### Fixed
+- Replaced runtime panics during Web Standard API bootstrap within the VM pool with graceful Go errors returned to the application controller.
+- Handled VM resource replenishment via non-panicking `recreateAndQueueVM` routine.
+- Cleared unwanted certificates CA and outdated binaries from local workspace.
+
+---
+
+## [1.1.2] - 2026-06-15
+
+### Added
+- **Neural Cache Compression**: Zero-dependency implementation of LZ77 sliding window (4KB dictionary) and variable-length Huffman entropy encoding.
+- Smart compression heuristics: Payloads smaller than 512 bytes are bypassed; only standard web formats (`text/*`, `application/json`, etc.) are compressed.
+- Internal metrics tracking compression savings, ratio, and original size in Cache Stats.
+
+---
+
+## [1.1.1] - 2026-06-15
+
+### Added
+- **Web Security Hardening**: Integrated Strict HTTP Response Headers including Strict-Transport-Security (HSTS) and Content-Security-Policy (CSP) inside dynamic middleware.
+- Cleaned query parameters containing secrets from URL logs.
+
+---
+
+## [1.1.0] - 2026-06-14
+
+### Added
+- **Security Hardening (Phase 2)**:
+  - Input validation on JS dynamic engine routing (SSRF blocker).
+  - WebUI transparent proxy connection limits (maximum 1020 concurrent connections).
+  - Sanitization of CRLF injections in headers.
+  - SQLite auditing buffer batching with `busy_timeout` configuration.
+  - Native subprocess workers pool bounding.
+  - API Keys encriptação local com cifras AES-GCM.
+
+---
+
+## [1.0.0] - 2026-06-14
+
+### Added
+- Initial Release of Sonic Engine.
+- Multi-protocol, multi-language intercepting engine (JS Goja, WASM Wazero, Native subprocesses).
+- Embedded SQLite storage with persistent Rate Limiting rules.
+- Concurrent Sandbox Interceptor for dynamic payload breakpoints.
+- AI Proxy Gateway with semantic local TF-IDF cache and OpenAI integration.
+- Minimalist monocromatic WebUI dashboard.
+- Windows Service support via SCM handler.
+</details>
 
 <details>
 <summary><b>🛠️ Tab 1: Implemented Changes & Features</b></summary>
@@ -124,7 +215,7 @@ function onTraffic(request) {
         data.push({ id: i, metric: Math.random() * 100, status: "active" });
     }
     request.headers.set('X-Sonic-Data-Processed', data.length.toString());
-    request.headers.set('X-Sonic-Engine', 'v1.1.3');
+    request.headers.set('X-Sonic-Engine', 'v1.4.0');
     return request;
 }
 ```
@@ -181,6 +272,10 @@ The visual video walkthrough demonstrating tab transitions and real-time graph r
 </details>
 
 ## ⚡ Quick Installation
+
+> 📥 **Download Pre-compiled Binaries / Baixar Binários Pré-compilados:**  
+> You can download the latest pre-compiled binaries for **Linux** (amd64/arm64) and **Windows** (amd64) directly from the **[GitHub Releases](https://github.com/manassesbinga/sonic/releases)** page.  
+> Você pode baixar os binários pré-compilados mais recentes para **Linux** (amd64/arm64) e **Windows** (amd64) diretamente da página de **[Releases do GitHub](https://github.com/manassesbinga/sonic/releases)**.
 
 ---
 
@@ -769,6 +864,11 @@ make docker-run  # Run via Docker Compose
 - [ ] Worker pipeline/composition (declarative via `sonic.yaml`)
 - [ ] Integrated testing framework for workers
 
+### v0.6 — UDP, DNS & QUIC (Roadmap)
+- [ ] **UDP Transparent Proxying**: Virtual connection tracking & UDP socket routing.
+- [ ] **DNS Interception**: Parse binary DNS queries & dynamic address routing.
+- [ ] **QUIC & HTTP/3 MITM Decryption**: Stream multiplexing over UDP.
+
 ---
 
 ## 🛠️ How Multi-Language & Multi-Protocol Work (The Truth)
@@ -854,7 +954,7 @@ Intelligent caching gateway for LLM APIs (OpenAI/Anthropic).
 The **eBPF + WASM workers + distributed KV** combination doesn't exist in any open-source project! Sonic is the only proxy where you can:
 - Write a worker in Rust (compiled to WASM)
 - Share state with a JavaScript worker
-- Intercept DNS and HTTP packets in the same pipeline
+- Intercept HTTP and TCP packets in the same pipeline
 - All this at kernel speed via eBPF!
 
 ---
@@ -872,7 +972,7 @@ MIT — 2026
 # Sonic — Motor de Borda Multi-Linguagem e Multi-Protocolo
 
 
-O **Sonic** é uma **plataforma para execução de lógica sobre qualquer dado de rede**. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC). Compatível com a **API de Cloudflare Workers** — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).
+O **Sonic** é uma **plataforma para execução de lógica sobre qualquer dado de rede**. Proxy L7 transparente, acelerado por eBPF, com suporte a múltiplas linguagens (JavaScript, WebAssembly) e protocolos (HTTP, HTTPS, WebSocket, gRPC, TCP). Compatível com a **API de Cloudflare Workers** — execute seus workers localmente ou na borda sem fidelização (vendor lock-in).
 
 ---
 
@@ -880,7 +980,7 @@ O **Sonic** é uma **plataforma para execução de lógica sobre qualquer dado d
 
 O Sonic transforma-se de "apenas mais um proxy JS" em uma **plataforma para rodar lógica sobre QUALQUER dado de rede**, com três pilares fundamentais:
 
-1. **Qualquer canal**: Agnóstico a protocolos (HTTP, TCP, UDP, DNS, WebSocket, gRPC, QUIC)
+1. **Qualquer canal**: Agnóstico a protocolos (HTTP, HTTPS, WebSocket, gRPC, TCP; com UDP, DNS e QUIC planejados no roadmap)
 2. **Qualquer linguagem**: JavaScript (Goja), WebAssembly (Rust, Go, C), nativo via stdin/stdout
 3. **Estado compartilhado**: KV Store persistente (bbolt) comum a todos os workers, independente de linguagem/protocolo
 
@@ -896,11 +996,102 @@ O Sonic transforma-se de "apenas mais um proxy JS" em uma **plataforma para roda
 
 ![Teste](assets/teste.png)
 
-# 📊 Apresentação de Resultados e CRUD de Workers (Sonic v1.1.3)
+# 📊 Apresentação de Resultados e CRUD de Workers (Sonic v1.4.0)
 
 Este documento registra a conclusão do desenvolvimento do CRUD visual de Edge Workers a partir da WebUI, bem como a validação do sistema sob teste de estresse e carga concorrente em grande escala.
 
 Abaixo estão todos os detalhes e evidências estruturados em abas colapsáveis para fácil navegação:
+
+<details>
+<summary><b>🎬 Changelog Completo do Projeto e Demonstração em Vídeo</b></summary>
+<br>
+
+### 📺 Demonstração em Vídeo
+Assista ao funcionamento do sistema: [Sonic Engine v1.4.0 - Demonstração em Vídeo](https://youtu.be/PzQM_MJUqRk)
+
+### 📋 Registro de Alterações Completo
+
+Todas as alterações notáveis no projeto Sonic serão documentadas aqui.
+
+---
+
+## [1.4.0] - 2026-06-16
+
+### Adicionado
+- Endpoints CRUD e painel de controle WebUI para registros DNS estáticos, rotas de portas UDP e regras de desvio (bypass) de descriptografia QUIC.
+- Redesenho completo da interface administrativa WebUI com tema AMOLED Pure Black.
+- Timeouts de contexto de alta performance para chamadas Goja Outbound Fetch.
+- Limite de tempo de espera (queue wait timeout) para empréstimo de instâncias WASM virtuais sob carga.
+
+### Alterado
+- Expressões regulares de validação pré-compiladas globalmente em `webui/server.go` para maximizar a taxa de transferência da API.
+- Prazo limite (read deadline) do handshake TLS inicial no proxy transparente reduzido de 5s para 2s para mitigar ataques Slowloris.
+- Liberação de portas nos cabeçalhos de Referer/Origin para requisições anti-CSRF vindas de localhost/loopback.
+
+### Corrigido
+- Correção na lógica de recuperação inteligente do motor nativo para respeitar alterações e limpezas completas do corpo do pacote.
+
+---
+
+## [1.3.0] - 2026-06-16
+
+### Adicionado
+- Exibição dinâmica do token de autorização da WebUI no banner de console de inicialização quando configurado vazio.
+- Build Docker multi-stage visando Go 1.25.
+- Diretórios de dados persistentes (`/etc/sonic/data`) no volume do Docker.
+
+### Alterado
+- Padronização do arquivo de template de variáveis de ambiente `.env.example`.
+- Atualização da orquestração de containers `docker-compose.yml` para remover propriedades obsoletas e suportar ligação completa de portas para telemetria e WebUI.
+
+### Corrigido
+- Substituição de pânicos em tempo de execução durante o bootstrap da Web Standard API dentro do pool de VMs por erros Go retornados graciosamente ao controlador.
+- Tratamento de reposição de recursos de VM através da rotina sem pânico `recreateAndQueueVM`.
+- Limpeza de certificados CA não desejados e binários desatualizados do workspace local.
+
+---
+
+## [1.1.2] - 2026-06-15
+
+### Adicionado
+- **Compressão Neural de Cache**: Implementação sem dependências externas de janela deslizante LZ77 (dicionário de 4KB) e codificação de entropia Huffman de comprimento variável.
+- Heurísticas inteligentes de compressão: Payloads menores que 512 bytes são ignoradas; apenas formatos web padrão (`text/*`, `application/json`, etc.) são comprimidos.
+- Métricas internas acompanhando a economia de compressão, taxa e tamanho original em Cache Stats.
+
+---
+
+## [1.1.1] - 2026-06-15
+
+### Adicionado
+- **Endurecimento de Segurança Web**: Integração de Cabeçalhos Estritos de Resposta HTTP incluindo Strict-Transport-Security (HSTS) e Content-Security-Policy (CSP) dentro do middleware dinâmico.
+- Limpeza de parâmetros de consulta contendo segredos nos logs de URL.
+
+---
+
+## [1.1.0] - 2026-06-14
+
+### Adicionado
+- **Endurecimento de Segurança (Fase 2)**:
+  - Validação de entrada no roteamento dinâmico do motor JS (bloqueador SSRF).
+  - Limites de conexão de proxy transparente na WebUI (máximo de 1020 conexões concorrentes).
+  - Sanitização de injeções CRLF em cabeçalhos.
+  - Processamento em lote do buffer de auditoria SQLite com configuração `busy_timeout`.
+  - Limite do pool de workers de subprocesso nativos.
+  - Criptografia local de Chaves de API com cifras AES-GCM.
+
+---
+
+## [1.0.0] - 2026-06-14
+
+### Adicionado
+- Lançamento Inicial do Sonic Engine.
+- Motor de intercepção multi-protocolo e multi-linguagem (JS Goja, WASM Wazero, subprocessos nativos).
+- Armazenamento SQLite embarcado com regras persistentes de Rate Limiting.
+- Interceptador Concorrente Sandbox para breakpoints dinâmicos de payload.
+- AI Proxy Gateway com cache semântico local TF-IDF e integração OpenAI.
+- Painel WebUI minimalista monocromático.
+- Suporte a Serviço do Windows via SCM.
+</details>
 
 <details>
 <summary><b>🛠️ Aba 1: Alterações e Funcionalidades Implementadas</b></summary>
@@ -942,7 +1133,7 @@ function onTraffic(request) {
         data.push({ id: i, metric: Math.random() * 100, status: "active" });
     }
     request.headers.set('X-Sonic-Data-Processed', data.length.toString());
-    request.headers.set('X-Sonic-Engine', 'v1.1.3');
+    request.headers.set('X-Sonic-Engine', 'v1.4.0');
     return request;
 }
 ```
@@ -1521,7 +1712,7 @@ O Sonic Engine atinge latências na ordem de microssegundos em plataformas Linux
 A combinação de **eBPF + workers WASM + KV distribuído** não existe em nenhum projeto open-source! O Sonic é o único proxy onde você pode:
 - Escrever um worker em Rust (compilado para WASM)
 - Compartilhar estado com um worker JavaScript
-- Interceptar pacotes DNS e HTTP no mesmo pipeline
+- Interceptar pacotes HTTP e TCP no mesmo pipeline
 - Tudo isso em velocidade de kernel via eBPF!
 
 ---

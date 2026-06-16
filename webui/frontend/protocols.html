@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Admin Web UI - Protocols Management</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+    <style>
+        .tabs-nav {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            padding-bottom: 0.5rem;
+        }
+        .tab-nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.75rem 1.5rem;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+        .tab-nav-btn:hover {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+        .tab-nav-btn.active {
+            color: var(--color-primary);
+            background-color: rgba(59, 130, 246, 0.06);
+        }
+        .tab-nav-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--color-primary);
+            box-shadow: 0 0 8px var(--color-primary);
+        }
+        .protocol-section {
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }
+        .protocol-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .form-input {
+            background-color: #000000;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            padding: 0.65rem 0.85rem;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color var(--transition-fast);
+        }
+        .form-input:focus {
+            border-color: var(--color-primary);
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 1.15rem;
+            height: 1.15rem;
+            accent-color: var(--color-primary);
+            cursor: pointer;
+        }
+        .checkbox-group label {
+            font-size: 0.9rem;
+            color: var(--text-color);
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .crud-form {
+            background-color: var(--surface-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        .crud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+            <h3 class="card-title" style="font-size: 1.35rem;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary)"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                Network Protocols Engine Configuration
+            </h3>
+        </div>
+
+        <div style="padding: 1.5rem;">
+            <!-- Tabs Navigation -->
+            <div class="tabs-nav">
+                <button id="nav-btn-dns" class="tab-nav-btn active" onclick="switchTab('dns')">DNS Interception</button>
+                <button id="nav-btn-udp" class="tab-nav-btn" onclick="switchTab('udp')">UDP Proxy & Routing</button>
+                <button id="nav-btn-quic" class="tab-nav-btn" onclick="switchTab('quic')">QUIC / HTTP3 MITM</button>
+            </div>
+
+            <!-- Global Action Buttons (Save all config) -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Configure active interception parameters and rules persistently.</span>
+                <button class="auth-button" style="width: auto; padding: 0.65rem 1.5rem;" onclick="saveGlobalConfig()">Salvar Configurações Globais</button>
+            </div>
+
+            <!-- ==================== DNS SECTION ==================== -->
+            <div id="section-dns" class="protocol-section active">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>DNS Port</label>
+                        <input type="number" id="dns-port" class="form-input" placeholder="53" min="1" max="65535">
+                    </div>
+                    <div class="form-group">
+                        <label>Upstream Resolver</label>
+                        <input type="text" id="dns-upstream" class="form-input" placeholder="1.1.1.1:53">
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="dns-enabled">
+                            <label for="dns-enabled">Enable DNS Interception</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 2rem 0 1rem 0;">
+                    <h4 style="font-family: 'Outfit'; font-size: 1.1rem; color: #ffffff;">DNS Forge / Block Records</h4>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="filter-btn" style="border-color: var(--color-warning); color: var(--color-warning); padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="clearDNSCache()">Limpar Cache DNS</button>
+                        <button class="auth-button" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem;" onclick="showDNSForm()">+ Novo Registro</button>
+                    </div>
+                </div>
+
+                <!-- DNS Record Form -->
+                <div id="dns-form" class="crud-form">
+                    <div class="crud-header">
+                        <h5 id="dns-form-title" style="font-family: 'Outfit'; color: #ffffff;">Adicionar Registro DNS</h5>
+                        <button onclick="hideDNSForm()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem;">&times;</button>
+                    </div>
+                    <input type="hidden" id="dns-rec-id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Domain</label>
+                            <input type="text" id="dns-rec-domain" class="form-input" placeholder="ex: portal.sonic.local">
+                        </div>
+                        <div class="form-group">
+                            <label>Record Type</label>
+                            <select id="dns-rec-type" class="form-input" style="height: 38px;" onchange="toggleDNSAddressField()">
+                                <option value="A">A (IPv4 Address)</option>
+                                <option value="AAAA">AAAA (IPv6 Address)</option>
+                                <option value="CNAME">CNAME (Canonical Name)</option>
+                                <option value="TXT">TXT (Text)</option>
+                                <option value="MX">MX (Mail Exchange)</option>
+                                <option value="NXDOMAIN">NXDOMAIN (Block Domain)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="dns-address-group">
+                            <label>Target Address / Value</label>
+                            <input type="text" id="dns-rec-address" class="form-input" placeholder="ex: 192.168.1.100">
+                        </div>
+                        <div class="form-group">
+                            <label>TTL (Seconds)</label>
+                            <input type="number" id="dns-rec-ttl" class="form-input" placeholder="300" min="0">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button class="filter-btn" style="border-color: transparent; color: var(--text-muted);" onclick="hideDNSForm()">Cancelar</button>
+                        <button class="auth-button" style="width: auto; padding: 0.4rem 1rem;" onclick="saveDNSRecord()">Confirmar</button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Domain</th>
+                                <th>Type</th>
+                                <th>Target Value</th>
+                                <th>TTL</th>
+                                <th style="text-align: right; padding-right: 1.5rem;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dns-table-body">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhum registro estático configurado.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== UDP SECTION ==================== -->
+            <div id="section-udp" class="protocol-section">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>UDP Intercept Port</label>
+                        <input type="number" id="udp-port" class="form-input" placeholder="8443" min="1" max="65535">
+                    </div>
+                    <div class="form-group">
+                        <label>Session Timeout (Seconds)</label>
+                        <input type="number" id="udp-timeout" class="form-input" placeholder="30" min="1">
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="udp-enabled">
+                            <label for="udp-enabled">Enable UDP Interception</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 2rem 0 1rem 0;">
+                    <h4 style="font-family: 'Outfit'; font-size: 1.1rem; color: #ffffff;">UDP Packet Routing / Bypass Rules</h4>
+                    <button class="auth-button" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem;" onclick="showUDPForm()">+ Nova Rota</button>
+                </div>
+
+                <!-- UDP Route Form -->
+                <div id="udp-form" class="crud-form">
+                    <div class="crud-header">
+                        <h5 id="udp-form-title" style="font-family: 'Outfit'; color: #ffffff;">Adicionar Rota UDP</h5>
+                        <button onclick="hideUDPForm()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem;">&times;</button>
+                    </div>
+                    <input type="hidden" id="udp-route-id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Source Address/Port</label>
+                            <input type="text" id="udp-route-source" class="form-input" placeholder="ex: 192.168.1.50:* ou *">
+                        </div>
+                        <div class="form-group">
+                            <label>Destination Address/Port</label>
+                            <input type="text" id="udp-route-dest" class="form-input" placeholder="ex: 10.0.0.5:9000">
+                        </div>
+                        <div class="form-group">
+                            <label>Action</label>
+                            <select id="udp-route-action" class="form-input" style="height: 38px;">
+                                <option value="reroute">Reroute (Redirecionar)</option>
+                                <option value="bypass">Bypass (Passar Direto)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button class="filter-btn" style="border-color: transparent; color: var(--text-muted);" onclick="hideUDPForm()">Cancelar</button>
+                        <button class="auth-button" style="width: auto; padding: 0.4rem 1rem;" onclick="saveUDPRoute()">Confirmar</button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Source Filter</th>
+                                <th>Destination Upstream</th>
+                                <th>Action</th>
+                                <th style="text-align: right; padding-right: 1.5rem;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="udp-table-body">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma rota UDP configurada.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== QUIC SECTION ==================== -->
+            <div id="section-quic" class="protocol-section">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>QUIC Intercept Port</label>
+                        <input type="number" id="quic-port" class="form-input" placeholder="8443" min="1" max="65535">
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="quic-enabled">
+                            <label for="quic-enabled">Enable QUIC & HTTP/3 MITM Decryption</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h4 style="font-family: 'Outfit'; font-size: 1rem; color: #ffffff; margin-top: 1.5rem; margin-bottom: 0.75rem;">Optimizations and Intercept Accelerator</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="quic-gro">
+                            <label for="quic-gro">Enable UDP GRO/GSO Syscall Bundling</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="quic-ebpf">
+                            <label for="quic-ebpf">Enable eXpress Data Path (xdp) Raw steering</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 2.5rem 0 1rem 0;">
+                    <h4 style="font-family: 'Outfit'; font-size: 1.1rem; color: #ffffff;">QUIC Decryption Bypass Domains</h4>
+                    <button class="auth-button" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem;" onclick="addBypassDomain()">+ Novo Domínio</button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Domain Rule</th>
+                                <th style="text-align: right; padding-right: 1.5rem;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quic-table-body">
+                            <tr>
+                                <td colspan="2" style="text-align: center; color: var(--text-muted);">Nenhum domínio de bypass configurado.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Disclaimer Box -->
+            <div style="margin-top: 2.5rem; padding: 1rem; background-color: rgba(59, 130, 246, 0.03); border: 1px dashed var(--border-color); border-radius: 8px; font-size: 0.825rem; display: flex; align-items: flex-start; gap: 0.75rem; color: var(--text-muted); line-height: 1.5;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary); flex-shrink: 0; margin-top: 0.1rem;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <div>
+                    <strong>Roadmap Alignment Disclaimer:</strong> The dynamic script redirection, transparent proxy mapping, and socket intercept engines for <strong>DNS, UDP, and QUIC/HTTP3</strong> are categorized under the Sonic Core evolution roadmap. The CRUD actions on this interface securely persist configs to the engine to bootstrap eXpress worker integration when compiled with experimental kernel hooks.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script at the end of body -->
+    <script src="shared.js"></script>
+    <script>
+        let globalConfig = {
+            dns: { enabled: false, port: 53, upstream: "1.1.1.1:53", records: [] },
+            udp: { enabled: false, port: 8443, sessionTimeout: 30, routes: [] },
+            quic: { enabled: false, port: 8443, bypassDomains: [], groGso: false, ebpfRedirection: false }
+        };
+
+        window.onPageInit = function() {
+            loadConfig();
+        };
+
+        window.onPagePoll = function() {
+            // Keep status fresh but do not overwrite active form states
+        };
+
+        async function loadConfig() {
+            const data = await window.fetchData('/api/protocols/config');
+            if (data) {
+                globalConfig = data;
+                // Inicialização defensiva para evitar TypeError caso os campos no JSON venham nulos
+                globalConfig.dns.records = globalConfig.dns.records || [];
+                globalConfig.udp.routes = globalConfig.udp.routes || [];
+                globalConfig.quic.bypassDomains = globalConfig.quic.bypassDomains || [];
+
+                populateForm();
+                renderDNSTable();
+                renderUDPTable();
+                renderQUICTable();
+            }
+        }
+
+        function populateForm() {
+            // DNS
+            document.getElementById('dns-port').value = globalConfig.dns.port;
+            document.getElementById('dns-upstream').value = globalConfig.dns.upstream;
+            document.getElementById('dns-enabled').checked = globalConfig.dns.enabled;
+
+            // UDP
+            document.getElementById('udp-port').value = globalConfig.udp.port;
+            document.getElementById('udp-timeout').value = globalConfig.udp.sessionTimeout;
+            document.getElementById('udp-enabled').checked = globalConfig.udp.enabled;
+
+            // QUIC
+            document.getElementById('quic-port').value = globalConfig.quic.port;
+            document.getElementById('quic-enabled').checked = globalConfig.quic.enabled;
+            document.getElementById('quic-gro').checked = globalConfig.quic.groGso;
+            document.getElementById('quic-ebpf').checked = globalConfig.quic.ebpfRedirection;
+        }
+
+        async function saveGlobalConfig() {
+            // Map values from UI back to config object
+            globalConfig.dns.port = parseInt(document.getElementById('dns-port').value) || 53;
+            globalConfig.dns.upstream = document.getElementById('dns-upstream').value.trim() || "1.1.1.1:53";
+            globalConfig.dns.enabled = document.getElementById('dns-enabled').checked;
+
+            globalConfig.udp.port = parseInt(document.getElementById('udp-port').value) || 8443;
+            globalConfig.udp.sessionTimeout = parseInt(document.getElementById('udp-timeout').value) || 30;
+            globalConfig.udp.enabled = document.getElementById('udp-enabled').checked;
+
+            globalConfig.quic.port = parseInt(document.getElementById('quic-port').value) || 8443;
+            globalConfig.quic.enabled = document.getElementById('quic-enabled').checked;
+            globalConfig.quic.groGso = document.getElementById('quic-gro').checked;
+            globalConfig.quic.ebpfRedirection = document.getElementById('quic-ebpf').checked;
+
+            const res = await fetch('/api/protocols/config', {
+                method: 'POST',
+                headers: window.getHeaders(),
+                body: JSON.stringify(globalConfig)
+            });
+
+            if (res.ok) {
+                alert("Configurações dos protocolos salvas com sucesso!");
+                loadConfig();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert("Erro ao salvar configurações: " + (err.error || "Erro desconhecido"));
+            }
+        }
+
+        function switchTab(tabId) {
+            // Tabs button toggle
+            document.querySelectorAll('.tab-nav-btn').forEach(btn => btn.classList.remove('active'));
+            const clickedBtn = document.getElementById(`nav-btn-${tabId}`);
+            if (clickedBtn) clickedBtn.classList.add('active');
+
+            // Sections toggle
+            document.querySelectorAll('.protocol-section').forEach(sec => sec.classList.remove('active'));
+            const targetSec = document.getElementById(`section-${tabId}`);
+            if (targetSec) targetSec.classList.add('active');
+        }
+
+        // ==================== DNS CRUD ====================
+        function renderDNSTable() {
+            const tbody = document.getElementById('dns-table-body');
+            const records = globalConfig.dns.records || [];
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhum registro estático configurado.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = records.map(r => `
+                <tr>
+                    <td style="font-weight: 500; font-family: 'Outfit';">${window.escapeHTML(r.domain)}</td>
+                    <td><span class="status-badge primary" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;">${window.escapeHTML(r.type)}</span></td>
+                    <td style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted);">${r.type === 'NXDOMAIN' ? '<em>Blocked (NXDOMAIN)</em>' : window.escapeHTML(r.address || '-')}</td>
+                    <td style="color: var(--text-muted);">${r.ttl}s</td>
+                    <td style="text-align: right; padding-right: 1.5rem;">
+                        <button class="filter-btn" style="border-color: var(--color-primary); color: var(--color-primary); margin-right: 0.25rem; padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="editDNSRecord('${r.id}')">Editar</button>
+                        <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error); padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteDNSRecord('${r.id}')">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showDNSForm() {
+            document.getElementById('dns-form-title').innerText = "Adicionar Registro DNS";
+            document.getElementById('dns-rec-id').value = "";
+            document.getElementById('dns-rec-domain').value = "";
+            document.getElementById('dns-rec-type').value = "A";
+            document.getElementById('dns-rec-address').value = "";
+            document.getElementById('dns-rec-ttl').value = "300";
+            document.getElementById('dns-form').style.display = 'block';
+            toggleDNSAddressField();
+            document.getElementById('dns-rec-domain').focus();
+        }
+
+        function hideDNSForm() {
+            document.getElementById('dns-form').style.display = 'none';
+        }
+
+        function toggleDNSAddressField() {
+            const type = document.getElementById('dns-rec-type').value;
+            const addrGroup = document.getElementById('dns-address-group');
+            if (type === 'NXDOMAIN') {
+                addrGroup.style.display = 'none';
+            } else {
+                addrGroup.style.display = 'flex';
+                const input = document.getElementById('dns-rec-address');
+                if (type === 'A') input.placeholder = "ex: 192.168.1.100";
+                else if (type === 'AAAA') input.placeholder = "ex: 2001:db8::1";
+                else if (type === 'CNAME') input.placeholder = "ex: target.domain.com";
+                else if (type === 'TXT') input.placeholder = "ex: v=spf1 include:_spf.google.com";
+                else if (type === 'MX') input.placeholder = "ex: 10 mail.domain.com";
+            }
+        }
+
+        function saveDNSRecord() {
+            const id = document.getElementById('dns-rec-id').value || 'dns_' + Math.random().toString(36).substr(2, 9);
+            const domain = document.getElementById('dns-rec-domain').value.trim();
+            const type = document.getElementById('dns-rec-type').value;
+            const address = type === 'NXDOMAIN' ? "" : document.getElementById('dns-rec-address').value.trim();
+            const ttl = parseInt(document.getElementById('dns-rec-ttl').value) || 300;
+
+            if (!domain) {
+                alert("Por favor, preencha o domínio.");
+                return;
+            }
+            if (type !== 'NXDOMAIN' && !address) {
+                alert("Por favor, preencha o endereço de destino.");
+                return;
+            }
+
+            globalConfig.dns.records = globalConfig.dns.records || [];
+            const rec = { id, domain, type, address, ttl };
+            const existingIdx = globalConfig.dns.records.findIndex(r => r.id === id);
+            if (existingIdx > -1) {
+                globalConfig.dns.records[existingIdx] = rec;
+            } else {
+                globalConfig.dns.records.push(rec);
+            }
+
+            hideDNSForm();
+            renderDNSTable();
+        }
+
+        function editDNSRecord(id) {
+            const rec = globalConfig.dns.records.find(r => r.id === id);
+            if (rec) {
+                document.getElementById('dns-form-title').innerText = "Editar Registro DNS";
+                document.getElementById('dns-rec-id').value = rec.id;
+                document.getElementById('dns-rec-domain').value = rec.domain;
+                document.getElementById('dns-rec-type').value = rec.type;
+                document.getElementById('dns-rec-address').value = rec.address || "";
+                document.getElementById('dns-rec-ttl').value = rec.ttl;
+                document.getElementById('dns-form').style.display = 'block';
+                toggleDNSAddressField();
+                document.getElementById('dns-rec-domain').focus();
+            }
+        }
+
+        function deleteDNSRecord(id) {
+            if (confirm("Deseja excluir este registro DNS?")) {
+                globalConfig.dns.records = globalConfig.dns.records.filter(r => r.id !== id);
+                renderDNSTable();
+            }
+        }
+
+        async function clearDNSCache() {
+            if (confirm("Deseja limpar o cache dinâmico de DNS do Sonic?")) {
+                const res = await fetch('/api/protocols/dns/clear-cache', {
+                    method: 'POST',
+                    headers: window.getHeaders()
+                });
+                if (res.ok) {
+                    alert("Cache DNS purgado.");
+                } else {
+                    alert("Erro ao purgar cache.");
+                }
+            }
+        }
+
+        // ==================== UDP CRUD ====================
+        function renderUDPTable() {
+            const tbody = document.getElementById('udp-table-body');
+            const routes = globalConfig.udp.routes || [];
+            if (routes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma rota UDP configurada.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = routes.map(r => `
+                <tr>
+                    <td style="font-weight: 500; font-family: monospace; font-size: 0.85rem;">${window.escapeHTML(r.source)}</td>
+                    <td style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted);">${r.action === 'bypass' ? '<em>Bypass (Direct connection)</em>' : window.escapeHTML(r.dest || '-')}</td>
+                    <td><span class="status-badge ${r.action === 'bypass' ? 'info' : 'success'}" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;">${r.action.toUpperCase()}</span></td>
+                    <td style="text-align: right; padding-right: 1.5rem;">
+                        <button class="filter-btn" style="border-color: var(--color-primary); color: var(--color-primary); margin-right: 0.25rem; padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="editUDPRoute('${r.id}')">Editar</button>
+                        <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error); padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteUDPRoute('${r.id}')">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showUDPForm() {
+            document.getElementById('udp-form-title').innerText = "Adicionar Rota UDP";
+            document.getElementById('udp-route-id').value = "";
+            document.getElementById('udp-route-source').value = "";
+            document.getElementById('udp-route-dest').value = "";
+            document.getElementById('udp-route-action').value = "reroute";
+            document.getElementById('udp-form').style.display = 'block';
+            document.getElementById('udp-route-source').focus();
+        }
+
+        function hideUDPForm() {
+            document.getElementById('udp-form').style.display = 'none';
+        }
+
+        function saveUDPRoute() {
+            const id = document.getElementById('udp-route-id').value || 'udp_' + Math.random().toString(36).substr(2, 9);
+            const source = document.getElementById('udp-route-source').value.trim();
+            const action = document.getElementById('udp-route-action').value;
+            const dest = action === 'bypass' ? "" : document.getElementById('udp-route-dest').value.trim();
+
+            if (!source) {
+                alert("Por favor, preencha o filtro de origem.");
+                return;
+            }
+            if (action !== 'bypass' && !dest) {
+                alert("Por favor, preencha o endereço de destino.");
+                return;
+            }
+
+            globalConfig.udp.routes = globalConfig.udp.routes || [];
+            const route = { id, source, dest, action };
+            const existingIdx = globalConfig.udp.routes.findIndex(r => r.id === id);
+            if (existingIdx > -1) {
+                globalConfig.udp.routes[existingIdx] = route;
+            } else {
+                globalConfig.udp.routes.push(route);
+            }
+
+            hideUDPForm();
+            renderUDPTable();
+        }
+
+        function editUDPRoute(id) {
+            const route = globalConfig.udp.routes.find(r => r.id === id);
+            if (route) {
+                document.getElementById('udp-form-title').innerText = "Editar Rota UDP";
+                document.getElementById('udp-route-id').value = route.id;
+                document.getElementById('udp-route-source').value = route.source;
+                document.getElementById('udp-route-action').value = route.action;
+                document.getElementById('udp-route-dest').value = route.dest || "";
+                document.getElementById('udp-form').style.display = 'block';
+                document.getElementById('udp-route-source').focus();
+            }
+        }
+
+        function deleteUDPRoute(id) {
+            if (confirm("Deseja excluir esta rota UDP?")) {
+                globalConfig.udp.routes = globalConfig.udp.routes.filter(r => r.id !== id);
+                renderUDPTable();
+            }
+        }
+
+        // ==================== QUIC CRUD ====================
+        function renderQUICTable() {
+            const tbody = document.getElementById('quic-table-body');
+            const domains = globalConfig.quic.bypassDomains || [];
+            if (domains.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">Nenhum domínio de bypass configurado.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = domains.map((domain, idx) => `
+                <tr>
+                    <td style="font-weight: 500; font-family: monospace; font-size: 0.85rem;">${window.escapeHTML(domain)}</td>
+                    <td style="text-align: right; padding-right: 1.5rem;">
+                        <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error); padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteBypassDomain(${idx})">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addBypassDomain() {
+            const domain = prompt("Digite a regra de domínio de bypass para descriptografia QUIC (ex: *.stripe.com):");
+            if (domain && domain.trim()) {
+                globalConfig.quic.bypassDomains = globalConfig.quic.bypassDomains || [];
+                globalConfig.quic.bypassDomains.push(domain.trim());
+                renderQUICTable();
+            }
+        }
+
+        function deleteBypassDomain(idx) {
+            if (confirm(`Deseja excluir o domínio "${globalConfig.quic.bypassDomains[idx]}" da lista de bypass?`)) {
+                globalConfig.quic.bypassDomains.splice(idx, 1);
+                renderQUICTable();
+            }
+        }
+    </script>
+</body>
+</html>

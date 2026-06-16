@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -208,34 +209,43 @@ func (ne *NativeEngine) ProcessPacket(packet *Packet) (*PacketResult, error) {
 		return nil, fmt.Errorf("falha ao alocar processo do pool: %w", err)
 	}
 
-	// Limitação e otimização de payloads gigantes no IPC síncrono:
-	// Se o payload total for maior que 1MB, criamos um clone leve do pacote
-	// para omitir o body pesado na comunicação do Pipe, evitando saturação de CPU e I/O.
+	// TRUNCAMENTO INTELIGENTE A 64KB CONTRA DEADLOCK DE PIPES E LATÊNCIA
+	// Enviamos apenas o cabeçalho/primeiros 64KB do payload pesado para inspeção (WAF/CVE),
+	// o que cabe perfeitamente no buffer do pipe do sistema operacional sem bloquear a escrita.
 	var packetToCommunicate *Packet = packet
-	const maxIPCPayloadBytes = 1024 * 1024 // 1 MB
+	const maxIPCPayloadBytes = 64 * 1024 // 64 KB (tamanho de buffer de pipe padrão do SO)
 	
 	hasLargePayload := false
+	var originalData []byte
+	var originalReqBody string
+	var originalRespBody string
+
 	if len(packet.Data) > maxIPCPayloadBytes {
 		hasLargePayload = true
-	} else if packet.Request != nil && len(packet.Request.Body) > maxIPCPayloadBytes {
+		originalData = packet.Data
+	}
+	if packet.Request != nil && len(packet.Request.Body) > maxIPCPayloadBytes {
 		hasLargePayload = true
-	} else if packet.Response != nil && len(packet.Response.Body) > maxIPCPayloadBytes {
+		originalReqBody = packet.Request.Body
+	}
+	if packet.Response != nil && len(packet.Response.Body) > maxIPCPayloadBytes {
 		hasLargePayload = true
+		originalRespBody = packet.Response.Body
 	}
 
 	if hasLargePayload {
 		cloned := *packet
 		if len(cloned.Data) > maxIPCPayloadBytes {
-			cloned.Data = []byte("[DATA_TOO_LARGE_OMITTED_BY_SONIC]")
+			cloned.Data = cloned.Data[:maxIPCPayloadBytes]
 		}
 		if cloned.Request != nil && len(cloned.Request.Body) > maxIPCPayloadBytes {
 			clonedReq := *cloned.Request
-			clonedReq.Body = "[BODY_TOO_LARGE_OMITTED_BY_SONIC]"
+			clonedReq.Body = clonedReq.Body[:maxIPCPayloadBytes]
 			cloned.Request = &clonedReq
 		}
 		if cloned.Response != nil && len(cloned.Response.Body) > maxIPCPayloadBytes {
 			clonedResp := *cloned.Response
-			clonedResp.Body = "[BODY_TOO_LARGE_OMITTED_BY_SONIC]"
+			clonedResp.Body = clonedResp.Body[:maxIPCPayloadBytes]
 			cloned.Response = &clonedResp
 		}
 		packetToCommunicate = &cloned
@@ -252,16 +262,32 @@ func (ne *NativeEngine) ProcessPacket(packet *Packet) (*PacketResult, error) {
 	ne.recordSuccess()
 	ne.releaseProcess(np, true)
 
-	// Restaura o payload original pesado caso o subprocesso retorne o pacote com marcador
+	// RESTAURAÇÃO DE DADOS PESADOS NO GO:
+	// Devolvemos o restante do fluxo original intacto para o motor de rede processar,
+	// prevenindo perda de integridade de uploads e downloads de arquivos pesados
 	if result != nil && result.Packet != nil && hasLargePayload {
-		if result.Packet.Request != nil && result.Packet.Request.Body == "[BODY_TOO_LARGE_OMITTED_BY_SONIC]" && packet.Request != nil {
-			result.Packet.Request.Body = packet.Request.Body
+		if result.Packet.Request != nil && len(originalReqBody) > 0 {
+			var sentBody string
+			if packetToCommunicate.Request != nil {
+				sentBody = packetToCommunicate.Request.Body
+			}
+			if result.Packet.Request.Body == sentBody {
+				result.Packet.Request.Body = originalReqBody
+			}
 		}
-		if result.Packet.Response != nil && result.Packet.Response.Body == "[BODY_TOO_LARGE_OMITTED_BY_SONIC]" && packet.Response != nil {
-			result.Packet.Response.Body = packet.Response.Body
+		if result.Packet.Response != nil && len(originalRespBody) > 0 {
+			var sentBody string
+			if packetToCommunicate.Response != nil {
+				sentBody = packetToCommunicate.Response.Body
+			}
+			if result.Packet.Response.Body == sentBody {
+				result.Packet.Response.Body = originalRespBody
+			}
 		}
-		if string(result.Packet.Data) == "[DATA_TOO_LARGE_OMITTED_BY_SONIC]" {
-			result.Packet.Data = packet.Data
+		if len(originalData) > 0 {
+			if bytes.Equal(result.Packet.Data, packetToCommunicate.Data) {
+				result.Packet.Data = originalData
+			}
 		}
 	}
 

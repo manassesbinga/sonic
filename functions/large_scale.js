@@ -14,7 +14,7 @@ function onTraffic(request) {
     }
     
     request.headers.set('X-Sonic-Data-Processed', data.length.toString());
-    request.headers.set('X-Sonic-Engine', 'v1.1.3');
+    request.headers.set('X-Sonic-Engine', 'v1.4.0');
     
     // Gerar um alerta de erro simulado ocasional (5% de chance) para enriquecer a apresentação visual
     if (Math.random() < 0.05) {

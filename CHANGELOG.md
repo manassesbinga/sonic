@@ -6,7 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.1.3] - 2026-06-15
+## [1.4.0] - 2026-06-16
+
+### Added
+- CRUD endpoints and management UI for DNS static forge records, UDP port routes, and QUIC decryption bypass rules.
+- Complete AMOLED Pure Black visual design overhaul of the administrative WebUI.
+- High-performance context timeouts for Goja Outbound Fetch requests.
+- Failsafe queue wait timeout for on-demand WASM VM module leasing under heavy loads.
+
+### Changed
+- Refactored validation regular expressions to be pre-compiled globally in `webui/server.go` for improved API throughput.
+- Reduced Transparent Proxy initial TLS handshake read deadline from 5s to 2s to mitigate slow connection DoS (Slowloris).
+- Permitted loopback CSRF Referer/Origin headers without requiring explicit port matching.
+
+### Fixed
+- Fixed smart payload restoration in Native worker engine, safely preserving user-applied payload mutations and clear-body instructions.
+
+---
+
+## [1.3.0] - 2026-06-16
 
 ### Added
 - Dynamic WebUI authorization token display in the startup console banner when configured token is empty.

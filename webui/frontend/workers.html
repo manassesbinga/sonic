@@ -25,11 +25,11 @@
         <div id="worker-form-container" style="display: none; background-color: var(--surface-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 5px; margin-bottom: 1.5rem;">
             <h4 id="worker-form-title" style="margin-bottom: 1rem; font-family: 'Outfit';">Criar Novo Edge Worker</h4>
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Nome do Arquivo (deve terminar com .js)</label>
-                <input type="text" id="worker-filename" class="search-input" style="width: 100%;" placeholder="ex: meu_worker.js">
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Nome do Arquivo (ex: .js, .wasm, .go, .rs, .py, .sh, .rb, .pl)</label>
+                <input type="text" id="worker-filename" class="search-input" style="width: 100%;" placeholder="ex: meu_worker.js, auth.wasm, script.py, build.sh">
             </div>
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Código JavaScript do Worker</label>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Código / Fonte do Worker</label>
                 <textarea id="worker-code" class="search-input" style="width: 100%; height: 320px; font-family: monospace; font-size: 0.85rem; padding: 0.5rem; white-space: pre; overflow-wrap: normal; overflow-x: auto; line-height: 1.4;" placeholder="// functions/meu_worker.js&#10;function onTraffic(request) {&#10;    log('Meu worker rodando!');&#10;    request.headers.set('X-Meu-Header', 'Sonic');&#10;    return request;&#10;}&#10;&#10;function onResponse(response) {&#10;    return response;&#10;}"></textarea>
             </div>
             <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
@@ -43,6 +43,8 @@
                 <thead>
                     <tr>
                         <th>Worker Name</th>
+                        <th>Linguagem</th>
+                        <th>Protocolo</th>
                         <th>Size</th>
                         <th>Active Handlers</th>
                         <th style="text-align: right; padding-right: 1.5rem;">Ações</th>
@@ -50,10 +52,16 @@
                 </thead>
                 <tbody id="workers-table-body">
                     <tr>
-                        <td colspan="4" style="text-align: center; color: var(--text-muted);">Loading workers...</td>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted);">Loading workers...</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Info Banner for Roadmap Protocols -->
+        <div style="margin-top: 1.25rem; padding: 0.75rem 1rem; background-color: rgba(6, 182, 212, 0.05); border: 1px dashed rgba(6, 182, 212, 0.15); border-radius: 8px; font-size: 0.8rem; display: flex; align-items: center; gap: 0.75rem; color: var(--text-muted); line-height: 1.45;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-secondary); flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>💡 <strong>Nota de Roadmap:</strong> O processamento e interceptação ativos para tráfego <strong>UDP, DNS e QUIC</strong> estão planejados para a versão <strong>v1.4.0</strong>. Atualmente, o Sonic intercepta e roteia tráfego HTTP, HTTPS, WebSocket, gRPC e TCP (Raw).</span>
         </div>
     </div>
 
@@ -80,7 +88,7 @@
             if (!tbody) return;
 
             if (!workers || workers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No worker files found in functions/</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No worker files found in functions/</td></tr>`;
                 return;
             }
 
@@ -90,9 +98,17 @@
                 if (w.onResponse) handlers.push('<span style="color: var(--color-success)">onResponse</span>');
                 const handlersStr = handlers.length > 0 ? handlers.join(', ') : '<span style="color: var(--text-muted)">none</span>';
 
+                // Determinar badge para a linguagem
+                let langBadgeClass = "warning";
+                if (w.language === "JavaScript") langBadgeClass = "primary";
+                else if (w.language === "WebAssembly" || w.language === "Go (WASM)" || w.language === "Rust (WASM)" || w.language === "C (WASM)") langBadgeClass = "success";
+                else if (w.language === "Python" || w.language === "Ruby" || w.language === "Shell Script" || w.language === "Perl") langBadgeClass = "info";
+
                 return `
                     <tr>
                         <td style="font-weight: 500; font-family: 'Outfit';">${window.escapeHTML(w.name)}</td>
+                        <td><span class="status-badge ${langBadgeClass}" style="font-size: 0.75rem; padding: 0.15rem 0.4rem;">${window.escapeHTML(w.language || '-')}</span></td>
+                        <td style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">${window.escapeHTML(w.protocol || '-')}</td>
                         <td style="color: var(--text-muted);">${window.escapeHTML(w.size)}</td>
                         <td>${handlersStr}</td>
                         <td style="text-align: right; padding-right: 1.5rem;">

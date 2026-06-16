@@ -296,9 +296,9 @@ func (p *TransparentProxy) handleConnection(conn net.Conn) {
 
 	bufferedConn := NewBufferedConn(conn)
 
-	// Set a 5-second read deadline for the initial TLS handshake / SNI parsing phase
+	// Set a 2-second read deadline for the initial TLS handshake / SNI parsing phase
 	// to prevent slowloris/DoS resource exhaustion (idle sockets holding resources).
-	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 
 	header, err := bufferedConn.Peek(5)
 	if err != nil {
