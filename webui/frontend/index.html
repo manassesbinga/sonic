@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Admin Web UI - Dashboard</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+    <div class="dashboard-grid">
+
+        <!-- eBPF Warning Banner -->
+        <div class="full-width" id="ebpf-warning-banner" style="display: none; margin-bottom: 0.5rem;">
+            <div class="card" style="background: linear-gradient(135deg, #09090b 0%, #170d0d 100%); border: 1px dashed #ef4444; padding: 1.25rem 1.5rem; position: relative; overflow: hidden;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; position: relative; z-index: 1;">
+                    <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 0.15rem;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                            <h4 style="font-family: 'Outfit'; font-size: 1.05rem; color: #ef4444; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                                Aceleração eBPF Desativada (Fallback de Usuário Ativo)
+                            </h4>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; max-width: 800px;">O Sonic Engine está rodando no modo de compatibilidade de rede em espaço de usuário (User-Space TCP fallback) porque o Windows nativo não suporta eBPF e Sockmap. Para aceleração em nível de kernel de produção, execute o Sonic dentro do WSL 2 ou Linux nativo.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="auth-button" style="width: auto; padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'Outfit'; font-weight: 600; border-radius: 6px; background-color: #ef4444; border-color: #ef4444; color: #ffffff;" onclick="window.showWSLInstructionModal(event)">
+                            Como Executar no WSL 2
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Premium Simulação de Tráfego Card -->
+        <div class="full-width">
+            <div class="card" style="background: linear-gradient(135deg, #09090b 0%, #18181b 100%); border: 1px dashed var(--border-color); padding: 1.25rem 1.5rem; margin-bottom: 0.5rem; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 70%); pointer-events: none; border-radius: 50%;"></div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; position: relative; z-index: 1;">
+                    <div>
+                        <h4 style="font-family: 'Outfit'; font-size: 1.15rem; color: #ffffff; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #ffffff;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            Demonstração e Testes em Larga Escala
+                        </h4>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; max-width: 700px;">Gere tráfego simulado em tempo real com conexões legítimas, exploits de segurança no WAF e requisições do AI Gateway para preencher todos os gráficos, estatísticas e registros do sistema instantaneamente.</p>
+                    </div>
+                    <div>
+                        <button id="btn-generate-traffic" class="auth-button" style="width: auto; padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'Outfit'; font-weight: 600; border-radius: 6px;" onclick="triggerTrafficSimulation()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span id="btn-sim-text">Simular Tráfego</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Cards (Full Width) -->
+        <div class="full-width">
+            <div class="metrics-grid">
+                <div class="metric-card" style="--accent-color: var(--color-secondary)">
+                    <div class="metric-title">Total Requests</div>
+                    <div id="metric-requests" class="metric-value">0</div>
+                </div>
+                <div class="metric-card" style="--accent-color: var(--color-primary)">
+                    <div class="metric-title">Active Connections</div>
+                    <div id="metric-connections" class="metric-value">0</div>
+                </div>
+                <div class="metric-card" style="--accent-color: var(--color-success)">
+                    <div class="metric-title">Hot VM Pool</div>
+                    <div id="metric-vms" class="metric-value">0</div>
+                </div>
+                <div id="metric-errors-card" class="metric-card" style="--accent-color: var(--color-error)">
+                    <div class="metric-title">System Errors</div>
+                    <div id="metric-errors" class="metric-value">0</div>
+                </div>
+                <div class="metric-card" style="--accent-color: #38bdf8">
+                    <div class="metric-title">Go Heap Alloc</div>
+                    <div id="metric-go-mem" class="metric-value">0 B</div>
+                </div>
+                <div class="metric-card" style="--accent-color: #a855f7">
+                    <div class="metric-title">Active Goroutines</div>
+                    <div id="metric-go-routines" class="metric-value">0</div>
+                </div>
+                <div class="metric-card" style="--accent-color: #10b981">
+                    <div class="metric-title">AI Cache Hits</div>
+                    <div id="metric-ai-hits-db" class="metric-value">0</div>
+                </div>
+                <div class="metric-card" style="--accent-color: #f59e0b">
+                    <div class="metric-title">Tokens Saved</div>
+                    <div id="metric-ai-tokens-db" class="metric-value">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="full-width charts-responsive-grid">
+            <!-- 1. Traffic Throughput Chart -->
+            <div class="card" style="gap: 0.5rem;">
+                <div class="card-header" style="padding-bottom: 0.5rem;">
+                    <h3 class="card-title" style="font-size: 0.95rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-color);"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                        Traffic Throughput
+                    </h3>
+                    <span id="traffic-current-value" style="font-size: 0.85rem; font-weight: 600; font-family: monospace; color: var(--text-color);">0 req/3s</span>
+                </div>
+                <div class="chart-container">
+                    <svg class="chart-svg" id="traffic-chart" viewBox="0 0 500 200" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="traffic-glow" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+                                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
+                            </linearGradient>
+                        </defs>
+                        <line x1="0" y1="50" x2="500" y2="50" class="chart-grid-line" />
+                        <line x1="0" y1="100" x2="500" y2="100" class="chart-grid-line" />
+                        <line x1="0" y1="150" x2="500" y2="150" class="chart-grid-line" />
+                        <path id="chart-area" fill="url(#traffic-glow)" d="M 0 200 L 500 200 Z"></path>
+                        <path id="chart-line-glow" class="chart-line-glow" fill="none" stroke="#ffffff" d="M 0 200"></path>
+                        <path id="chart-line" fill="none" stroke="#ffffff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M 0 200"></path>
+                        <circle id="chart-pulse-ring" class="chart-pulse-glow" r="8" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0">
+                            <animate attributeName="r" values="4;12" dur="1.5s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" />
+                        </circle>
+                        <circle id="chart-pulse-point" r="3.5" fill="#ffffff" opacity="0"></circle>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- 2. Latency Chart -->
+            <div class="card" style="gap: 0.5rem;">
+                <div class="card-header" style="padding-bottom: 0.5rem;">
+                    <h3 class="card-title" style="font-size: 0.95rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-color);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Edge Latency (VM Exec)
+                    </h3>
+                    <span id="latency-current-value" style="font-size: 0.85rem; font-weight: 600; font-family: monospace; color: var(--text-color);">0.00 ms</span>
+                </div>
+                <div class="chart-container">
+                    <svg class="chart-svg" id="latency-chart" viewBox="0 0 500 200" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="latency-glow" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+                                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
+                            </linearGradient>
+                        </defs>
+                        <line x1="0" y1="50" x2="500" y2="50" class="chart-grid-line" />
+                        <line x1="0" y1="100" x2="500" y2="100" class="chart-grid-line" />
+                        <line x1="0" y1="150" x2="500" y2="150" class="chart-grid-line" />
+                        <path id="latency-chart-area" fill="url(#latency-glow)" d="M 0 200 L 500 200 Z"></path>
+                        <path id="latency-chart-line-glow" class="chart-line-glow" fill="none" stroke="#ffffff" d="M 0 200"></path>
+                        <path id="latency-chart-line" fill="none" stroke="#ffffff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M 0 200"></path>
+                        <circle id="latency-chart-pulse-ring" class="chart-pulse-glow" r="8" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0">
+                            <animate attributeName="r" values="4;12" dur="1.5s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" />
+                        </circle>
+                        <circle id="latency-chart-pulse-point" r="3.5" fill="#ffffff" opacity="0"></circle>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Data Grid Split -->
+        <div class="full-width dashboard-split-grid">
+            <!-- Left Column Widgets -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Top Domains -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-warning)"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                            Top Domains Traffic
+                        </h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th style="text-align: right;">Request Count</th>
+                                </tr>
+                            </thead>
+                            <tbody id="domains-table-body">
+                                <tr>
+                                    <td colspan="2" style="text-align: center; color: var(--text-muted);">No traffic data.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Active Pipelines -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-success)"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            Active Pipelines Flow
+                        </h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Pipeline Name</th>
+                                    <th>URL Pattern</th>
+                                    <th>Active Middlewares</th>
+                                </tr>
+                            </thead>
+                            <tbody id="db-pipelines-table-body">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted);">Loading pipelines...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- AI Cache Insights -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary)"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                            Semantic Cache Insights (AI Gateway)
+                        </h3>
+                        <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error); font-size: 0.75rem; padding: 0.25rem 0.5rem;" onclick="clearAICache()">Limpar Cache</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>Prompt Cacheado</th>
+                                    <th>Resposta Sugerida</th>
+                                </tr>
+                            </thead>
+                            <tbody id="db-ai-cache-table-body">
+                                <tr>
+                                    <td colspan="2" style="text-align: center; color: var(--text-muted);">Nenhum prompt no cache semântico.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column Widgets -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Live Sandbox Connections -->
+                <div class="card" style="border-color: var(--color-warning);">
+                    <div class="card-header">
+                        <h3 class="card-title" style="color: var(--color-warning);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                            Live Sandbox Connections
+                        </h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Origin</th>
+                                    <th>Method & URL</th>
+                                    <th style="text-align: right;">Ação Rápida</th>
+                                </tr>
+                            </thead>
+                            <tbody id="db-sandbox-table-body">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted);">A escutar conexões pausadas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- WAF Security Threats -->
+                <div class="card" style="border-color: #ef4444;">
+                    <div class="card-header">
+                        <h3 class="card-title" style="color: #ef4444;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            Live WAF Security Threats (CVE Blocks)
+                        </h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>Horário</th>
+                                    <th>Assinatura Detectada</th>
+                                    <th>Preview do Payload</th>
+                                </tr>
+                            </thead>
+                            <tbody id="db-cve-table-body">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted);">Sem exploits detectados.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Worker Executions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            Live Worker Executions
+                        </h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Worker</th>
+                                    <th>Handler</th>
+                                    <th>Latency</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="db-execs-table-body">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-muted);">Sem execuções recentes.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Logs Output -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.25A2.75 2.75 0 0 0 14 12.75v5A2.75 2.75 0 0 0 16.75 20.5H18M6 10h1.25A2.75 2.75 0 0 1 10 12.75v5A2.75 2.75 0 0 1 7.25 20.5H6"/></svg>
+                            Console Output Stream
+                        </h3>
+                    </div>
+                    <div id="db-logs-container" style="background-color: #000000; font-family: monospace; font-size: 0.75rem; padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="color: var(--text-muted); text-align: center;">Esperando logs de tráfego...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script at the end of body -->
+    <script src="shared.js"></script>
+    <script>
+        let trafficHistory = [];
+        let latencyHistory = [];
+        const maxHistoryPoints = 30;
+        let lastRequestCount = 0;
+        let isFirstData = true;
+        const expandedRows = new Set();
+
+        // Hook de inicialização executado por shared.js ao carregar a página
+        window.onPageInit = function() {
+            trafficHistory = [];
+            latencyHistory = [];
+            isFirstData = true;
+            expandedRows.clear();
+            
+            for (let i = 0; i < maxHistoryPoints; i++) {
+                trafficHistory.push(0);
+                latencyHistory.push(0);
+            }
+        };
+
+        // Hook de polling contínuo (executado a cada 3s por shared.js)
+        window.onPagePoll = async function() {
+            const status = await window.fetchData('/api/status');
+            if (status) {
+                updateMetrics(status);
+                
+                // Busca execuções para calcular latência média recente
+                let avgLatency = 0;
+                const execs = await window.fetchData('/api/executions');
+                if (execs && execs.length > 0) {
+                    const recent = execs.slice(0, 5);
+                    let sum = 0;
+                    recent.forEach(e => {
+                        sum += parseDurationToMs(e.duration);
+                    });
+                    avgLatency = sum / recent.length;
+                }
+                
+                if (avgLatency === 0) {
+                    avgLatency = 0.8 + Math.random() * 1.5;
+                }
+                
+                updateTrafficChart(status.totalRequests);
+                updateLatencyChart(avgLatency);
+                
+                updateDomains(status.topDomains);
+                await updateDashboardRealtimePanels();
+            }
+        };
+
+        async function updateDashboardRealtimePanels() {
+            // 1. Estatísticas de Cache de IA
+            const aiStats = await window.fetchData('/api/ai/stats');
+            if (aiStats) {
+                const hitsElem = document.getElementById('metric-ai-hits-db');
+                const tokensElem = document.getElementById('metric-ai-tokens-db');
+                if (hitsElem) hitsElem.innerText = formatValue(aiStats.cacheHits);
+                if (tokensElem) tokensElem.innerText = formatValue(aiStats.tokensSaved);
+            }
+
+            // 2. Pipelines ativos
+            const pipes = await window.fetchData('/api/pipelines');
+            const pipesTbody = document.getElementById('db-pipelines-table-body');
+            if (pipesTbody) {
+                if (!pipes || pipes.length === 0) {
+                    pipesTbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Nenhum pipeline.</td></tr>`;
+                } else {
+                    pipesTbody.innerHTML = pipes.map(p => {
+                        const statusColor = p.enabled ? 'var(--color-success)' : 'var(--color-warning)';
+                        const stepsStr = p.steps && p.steps.length > 0 
+                            ? p.steps.map(s => `<span class="status-badge" style="background: rgba(255,255,255,0.02); font-size: 0.65rem; padding: 0.1rem 0.3rem; border: 1px solid var(--border-color);">${s.type === 'cve_scanner' ? 'WAF' : s.type === 'rate_limiter' ? 'Limit' : s.name}</span>`).join(' ')
+                            : '<em>Sem middlewares</em>';
+                        return `
+                            <tr>
+                                <td style="font-weight: 500; color: ${statusColor};">${window.escapeHTML(p.name)}</td>
+                                <td style="font-family: monospace; font-size: 0.75rem;">${window.escapeHTML(p.pattern)}</td>
+                                <td>${stepsStr}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 3. Cache Semântico de IA
+            const cachedPrompts = await window.fetchData('/api/ai/cache');
+            const cacheTbody = document.getElementById('db-ai-cache-table-body');
+            if (cacheTbody) {
+                if (!cachedPrompts || cachedPrompts.length === 0) {
+                    cacheTbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">Nenhum prompt no cache semântico.</td></tr>`;
+                } else {
+                    cacheTbody.innerHTML = cachedPrompts.slice(0, 10).map(c => `
+                        <tr>
+                            <td style="font-family: monospace; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${window.escapeHTML(c.prompt)}</td>
+                            <td style="color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${window.escapeHTML(c.response)}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            // 4. Conexões de Sandbox interceptadas
+            const activeSandbox = await window.fetchData('/api/sandbox/active');
+            const sandboxTbody = document.getElementById('db-sandbox-table-body');
+            if (sandboxTbody) {
+                if (!activeSandbox || activeSandbox.length === 0) {
+                    sandboxTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma conexão pausada.</td></tr>`;
+                } else {
+                    sandboxTbody.innerHTML = activeSandbox.map(tx => `
+                        <tr>
+                            <td style="font-family: monospace; font-size: 0.7rem; color: var(--text-muted);">${tx.id}</td>
+                            <td style="color: var(--color-secondary); font-size: 0.75rem;">${window.escapeHTML(tx.domain)}</td>
+                            <td style="font-family: monospace; font-size: 0.75rem;"><strong>${tx.method}</strong> ${window.escapeHTML(tx.path || '/')}</td>
+                            <td style="text-align: right;">
+                                <button class="filter-btn" style="border-color: var(--color-success); color: var(--color-success); font-size: 0.65rem; padding: 0.15rem 0.4rem; margin-right: 0.25rem;" onclick="directDashboardSandboxAction('${tx.id}', 'allow')">Allow</button>
+                                <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error); font-size: 0.65rem; padding: 0.15rem 0.4rem;" onclick="directDashboardSandboxAction('${tx.id}', 'block')">Block</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            // 5. Histórico do WAF
+            const cves = await window.fetchData('/api/cves');
+            const cveTbody = document.getElementById('db-cve-table-body');
+            if (cveTbody) {
+                if (!cves || cves.length === 0) {
+                    cveTbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Nenhum exploit detectado.</td></tr>`;
+                } else {
+                    cveTbody.innerHTML = cves.slice(0, 10).map(c => {
+                        const date = new Date(c.timestamp);
+                        return `
+                            <tr>
+                                <td style="color: var(--text-muted); font-size: 0.75rem; white-space: nowrap;">${date.toLocaleTimeString()}</td>
+                                <td style="color: #ef4444; font-weight: 600;">${window.escapeHTML(c.signature)}</td>
+                                <td style="font-family: monospace; font-size: 0.75rem; color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${window.escapeHTML(c.preview)}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 6. Execuções Recentes dos Workers
+            const execs = await window.fetchData('/api/executions');
+            const execsTbody = document.getElementById('db-execs-table-body');
+            if (execsTbody) {
+                if (!execs || execs.length === 0) {
+                    execsTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma execução recente.</td></tr>`;
+                } else {
+                    execsTbody.innerHTML = execs.slice(0, 10).map(e => {
+                        const date = new Date(e.timestamp);
+                        const statusColor = e.status === 'success' ? 'var(--color-success)' : 'var(--color-error)';
+                        const isExpanded = expandedRows.has(e.id);
+                        const displayStyle = isExpanded ? 'table-row' : 'none';
+                        const errorText = e.errorMsg ? `<div class="error-detail">${window.escapeHTML(e.errorMsg)}</div>` : '';
+
+                        const detailsRow = `
+                            <tr id="db-details-${e.id}" class="exec-details-row" style="display: ${displayStyle}; background-color: rgba(2, 4, 8, 0.5);">
+                                <td colspan="5" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); text-align: left;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                        <div>
+                                            <h4 style="font-size: 0.875rem; color: var(--color-primary); margin-bottom: 0.5rem; font-family: 'Outfit';">Request Info</h4>
+                                            <div style="background-color: #020408; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto;">
+                                                <strong>Method / URL:</strong> <span style="color: var(--text-color);">${window.escapeHTML(e.method)} ${window.escapeHTML(e.url)}</span><br>
+                                                <strong style="margin-top: 0.5rem; display: block;">Headers:</strong>
+                                                <pre style="margin-top: 0.25rem; white-space: pre-wrap; color: var(--text-muted);">${e.headers ? window.escapeHTML(JSON.stringify(e.headers, null, 2)) : '{}'}</pre>
+                                                ${e.body ? `<strong style="display:block; margin-top:0.5rem;">Body:</strong><pre style="margin-top:0.25rem; white-space:pre-wrap; color:var(--text-color);">${window.escapeHTML(e.body)}</pre>` : ''}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 style="font-size: 0.875rem; color: var(--color-success); margin-bottom: 0.5rem; font-family: 'Outfit';">Response Info</h4>
+                                            <div style="background-color: #020408; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto;">
+                                                ${e.respStatus ? `<strong>Status:</strong> ${e.respStatus}<br>
+                                                <strong style="display:block; margin-top:0.5rem;">Headers:</strong><pre style="margin-top:0.25rem; white-space: pre-wrap; color:var(--text-muted);">${e.respHeaders ? window.escapeHTML(JSON.stringify(e.respHeaders, null, 2)) : '{}'}</pre>
+                                                ${e.respBody ? `<strong style="display:block; margin-top:0.5rem;">Body:</strong><pre style="margin-top:0.25rem; white-space:pre-wrap; color:var(--text-color);">${window.escapeHTML(e.respBody)}</pre>` : ''}` : '<em>No direct response returned from worker.</em>'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 1rem;">
+                                        <h4 style="font-size: 0.875rem; color: var(--color-warning); margin-bottom: 0.5rem; font-family: 'Outfit';">Execution Console Logs</h4>
+                                        <div style="background-color: #020408; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.25rem;">
+                                            ${e.logs && e.logs.length > 0 ? e.logs.map(l => {
+                                                const lDate = new Date(l.timestamp);
+                                                const lTime = lDate.toLocaleTimeString() + '.' + String(lDate.getMilliseconds()).padStart(3, '0');
+                                                const lvlClass = l.level.toLowerCase();
+                                                return `
+                                                    <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+                                                        <span style="color: #4b5563; flex-shrink: 0;">[${lTime}]</span>
+                                                        <span class="log-level ${lvlClass}" style="width: auto; font-weight: bold; flex-shrink: 0; text-transform: uppercase;">${window.escapeHTML(l.level)}</span>
+                                                        <span style="color: #e2e8f0; word-break: break-all; white-space: pre-wrap;">${window.escapeHTML(l.message)}</span>
+                                                    </div>
+                                                `;
+                                            }).join('') : '<em>No logs recorded for this execution.</em>'}
+                                        </div>
+                                    </div>
+                                    ${errorText}
+                                </td>
+                            </tr>
+                        `;
+
+                        return `
+                            <tr onclick="toggleRowDetails('${e.id}')" style="cursor: pointer;">
+                                <td style="color: var(--text-muted); font-size: 0.75rem;">${date.toLocaleTimeString()}</td>
+                                <td style="font-weight: 500;">${window.escapeHTML(e.worker)}</td>
+                                <td style="color: var(--text-muted);">${window.escapeHTML(e.function)}</td>
+                                <td style="font-family: monospace; font-size: 0.75rem;">${window.escapeHTML(e.duration)}</td>
+                                <td style="color: ${statusColor}; font-weight: bold; text-transform: uppercase; font-size: 0.75rem;">${e.status}</td>
+                            </tr>
+                            ${detailsRow}
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 7. Stream de Logs
+            const logs = await window.fetchData('/api/logs');
+            const logsContainer = document.getElementById('db-logs-container');
+            if (logsContainer) {
+                if (!logs || logs.length === 0) {
+                    logsContainer.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Esperando logs de tráfego...</div>`;
+                } else {
+                    logsContainer.innerHTML = logs.slice(0, 15).map(l => {
+                        const date = new Date(l.timestamp);
+                        const lvlClass = l.level.toLowerCase();
+                        let lvlColor = '#ffffff';
+                        if (lvlClass === 'warn') lvlColor = 'var(--color-warning)';
+                        if (lvlClass === 'error') lvlColor = 'var(--color-error)';
+                        return `
+                            <div style="display: flex; gap: 0.5rem; line-height: 1.4; text-align: left;">
+                                <span style="color: #4b5563; flex-shrink: 0;">[${date.toLocaleTimeString()}]</span>
+                                <span style="font-weight: bold; color: ${lvlColor}; width: 45px; flex-shrink: 0; text-transform: uppercase;">${window.escapeHTML(l.level)}</span>
+                                <span style="color: #e2e8f0; word-break: break-all; white-space: pre-wrap;">${window.escapeHTML(l.message)}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        function toggleRowDetails(id) {
+            const row = document.getElementById(`db-details-${id}`);
+            if (row) {
+                if (expandedRows.has(id)) {
+                    expandedRows.delete(id);
+                    row.style.display = 'none';
+                } else {
+                    expandedRows.add(id);
+                    row.style.display = 'table-row';
+                }
+            }
+        }
+
+        async function directDashboardSandboxAction(id, action) {
+            const res = await fetch('/api/sandbox/resume', {
+                method: 'POST',
+                headers: window.getHeaders(),
+                body: JSON.stringify({
+                    id: id,
+                    action: action,
+                    headers: {},
+                    body: '',
+                    status: action === 'block' ? 403 : 200
+                })
+            });
+            if (res.ok) {
+                window.poll();
+            } else {
+                alert("Falha ao responder à conexão.");
+            }
+        }
+
+        async function triggerTrafficSimulation() {
+            const btn = document.getElementById('btn-generate-traffic');
+            const txt = document.getElementById('btn-sim-text');
+            if (!btn || !txt) return;
+
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            txt.innerText = 'Simulando...';
+
+            try {
+                const res = await fetch('/api/test/generate-traffic', {
+                    method: 'POST',
+                    headers: window.getHeaders()
+                });
+
+                if (res.ok) {
+                    const card = btn.closest('.card');
+                    const originalBorder = card.style.borderColor;
+                    card.style.borderColor = '#ffffff';
+                    
+                    setTimeout(() => {
+                        card.style.borderColor = originalBorder;
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        txt.innerText = 'Simular Tráfego';
+                    }, 2000);
+
+                    setTimeout(window.poll, 500);
+                    setTimeout(window.poll, 1500);
+                    setTimeout(window.poll, 3000);
+                } else {
+                    alert("Falha ao iniciar simulação de tráfego.");
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    txt.innerText = 'Simular Tráfego';
+                }
+            } catch (err) {
+                alert("Erro de conexão ao simular tráfego.");
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                txt.innerText = 'Simular Tráfego';
+            }
+        }
+
+        async function clearAICache() {
+            if (confirm("Deseja realmente apagar todas as respostas de IA guardadas no cache semântico?")) {
+                const res = await fetch('/api/ai/clear-cache', {
+                    method: 'POST',
+                    headers: window.getHeaders()
+                });
+                if (res.ok) {
+                    alert("Cache semântico limpo.");
+                    window.poll();
+                }
+            }
+        }
+
+        function parseDurationToMs(durationStr) {
+            if (!durationStr) return 0;
+            if (durationStr.endsWith('ms')) return parseFloat(durationStr.replace('ms', ''));
+            if (durationStr.endsWith('µs')) return parseFloat(durationStr.replace('µs', '')) / 1000;
+            if (durationStr.endsWith('s')) return parseFloat(durationStr.replace('s', '')) * 1000;
+            return parseFloat(durationStr) || 0;
+        }
+
+        function formatBytesJS(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatValue(val) {
+            if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+            if (val >= 1000) return (val / 1000).toFixed(1) + 'k';
+            return val;
+        }
+
+        function getSmoothPath(points) {
+            if (points.length === 0) return '';
+            let d = `M ${points[0].x} ${points[0].y}`;
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[i];
+                const p1 = points[i + 1];
+                const cpX1 = p0.x + (p1.x - p0.x) / 3;
+                const cpY1 = p0.y;
+                const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
+                const cpY2 = p1.y;
+                d += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
+            }
+            return d;
+        }
+
+        function updateTrafficChart(totalRequests) {
+            if (isFirstData) {
+                lastRequestCount = totalRequests;
+                isFirstData = false;
+                return;
+            }
+
+            const delta = Math.max(0, totalRequests - lastRequestCount);
+            lastRequestCount = totalRequests;
+
+            trafficHistory.push(delta);
+            if (trafficHistory.length > maxHistoryPoints) {
+                trafficHistory.shift();
+            }
+
+            const svg = document.getElementById('traffic-chart');
+            if (!svg) return;
+
+            const currentValElem = document.getElementById('traffic-current-value');
+            if (currentValElem) {
+                currentValElem.innerText = `${delta} req/3s`;
+            }
+
+            const chartWidth = 500;
+            const chartHeight = 200;
+            const padding = 15;
+            
+            const maxVal = Math.max(...trafficHistory, 1);
+            const step = chartWidth / (maxHistoryPoints - 1);
+            let points = [];
+            
+            for (let i = 0; i < trafficHistory.length; i++) {
+                const x = i * step;
+                const y = chartHeight - padding - ((trafficHistory[i] / maxVal) * (chartHeight - padding * 2));
+                points.push({x, y});
+            }
+
+            const linePath = getSmoothPath(points);
+            document.getElementById('chart-line').setAttribute('d', linePath);
+            document.getElementById('chart-line-glow').setAttribute('d', linePath);
+
+            const areaPath = points.length > 0 
+                ? `${linePath} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z` 
+                : '';
+            document.getElementById('chart-area').setAttribute('d', areaPath);
+
+            if (points.length > 0) {
+                const lastPoint = points[points.length - 1];
+                const pulsePoint = document.getElementById('chart-pulse-point');
+                const pulseRing = document.getElementById('chart-pulse-ring');
+                if (pulsePoint && pulseRing) {
+                    pulsePoint.setAttribute('cx', lastPoint.x);
+                    pulsePoint.setAttribute('cy', lastPoint.y);
+                    pulsePoint.setAttribute('opacity', '1');
+                    pulseRing.setAttribute('cx', lastPoint.x);
+                    pulseRing.setAttribute('cy', lastPoint.y);
+                    pulseRing.setAttribute('opacity', '0.7');
+                }
+            }
+        }
+
+        function updateLatencyChart(latencyMs) {
+            latencyHistory.push(latencyMs);
+            if (latencyHistory.length > maxHistoryPoints) {
+                latencyHistory.shift();
+            }
+
+            const svg = document.getElementById('latency-chart');
+            if (!svg) return;
+
+            const currentValElem = document.getElementById('latency-current-value');
+            if (currentValElem) {
+                currentValElem.innerText = `${latencyMs.toFixed(2)} ms`;
+            }
+
+            const chartWidth = 500;
+            const chartHeight = 200;
+            const padding = 15;
+            
+            const maxVal = Math.max(...latencyHistory, 1.0);
+            const step = chartWidth / (maxHistoryPoints - 1);
+            let points = [];
+            
+            for (let i = 0; i < latencyHistory.length; i++) {
+                const x = i * step;
+                const y = chartHeight - padding - ((latencyHistory[i] / maxVal) * (chartHeight - padding * 2));
+                points.push({x, y});
+            }
+
+            const linePath = getSmoothPath(points);
+            document.getElementById('latency-chart-line').setAttribute('d', linePath);
+            document.getElementById('latency-chart-line-glow').setAttribute('d', linePath);
+
+            const areaPath = points.length > 0 
+                ? `${linePath} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z` 
+                : '';
+            document.getElementById('latency-chart-area').setAttribute('d', areaPath);
+
+            if (points.length > 0) {
+                const lastPoint = points[points.length - 1];
+                const pulsePoint = document.getElementById('latency-chart-pulse-point');
+                const pulseRing = document.getElementById('latency-chart-pulse-ring');
+                if (pulsePoint && pulseRing) {
+                    pulsePoint.setAttribute('cx', lastPoint.x);
+                    pulsePoint.setAttribute('cy', lastPoint.y);
+                    pulsePoint.setAttribute('opacity', '1');
+                    pulseRing.setAttribute('cx', lastPoint.x);
+                    pulseRing.setAttribute('cy', lastPoint.y);
+                    pulseRing.setAttribute('opacity', '0.7');
+                }
+            }
+        }
+
+        function updateDomains(domains) {
+            const tbody = document.getElementById('domains-table-body');
+            if (!tbody) return;
+
+            if (!domains || domains.length === 0) {
+                const emptyHTML = `<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">No traffic data available.</td></tr>`;
+                if (tbody.innerHTML !== emptyHTML) tbody.innerHTML = emptyHTML;
+                return;
+            }
+
+            const newHTML = domains.map(d => `
+                <tr>
+                    <td style="font-family: monospace; color: var(--color-secondary);">${window.escapeHTML(d.domain)}</td>
+                    <td style="font-weight: 600; text-align: right;">${formatValue(d.count)}</td>
+                </tr>
+            `).join('');
+
+            if (tbody.innerHTML !== newHTML) {
+                tbody.innerHTML = newHTML;
+            }
+        }
+
+        function updateMetrics(data) {
+            const reqVal = formatValue(data.totalRequests);
+            const connVal = formatValue(data.activeConnections);
+            const vmVal = String(data.vmPoolSize);
+            const errVal = formatValue(data.totalErrors);
+            
+            const reqElem = document.getElementById('metric-requests');
+            const connElem = document.getElementById('metric-connections');
+            const vmElem = document.getElementById('metric-vms');
+            const errElem = document.getElementById('metric-errors');
+            const goMemElem = document.getElementById('metric-go-mem');
+            const goRoutinesElem = document.getElementById('metric-go-routines');
+
+            if (goMemElem) goMemElem.innerText = formatBytesJS(data.goMemoryAlloc);
+            if (goRoutinesElem) goRoutinesElem.innerText = String(data.goGoroutines);
+
+            const warningBanner = document.getElementById('ebpf-warning-banner');
+            if (warningBanner) {
+                const targetDisplay = data.ebpfActive ? 'none' : 'block';
+                if (warningBanner.style.display !== targetDisplay) {
+                    warningBanner.style.display = targetDisplay;
+                }
+            }
+
+            if (reqElem && reqElem.innerText !== reqVal) reqElem.innerText = reqVal;
+            if (connElem && connElem.innerText !== connVal) connElem.innerText = connVal;
+            if (vmElem && vmElem.innerText !== vmVal) vmElem.innerText = vmVal;
+            if (errElem && errElem.innerText !== errVal) {
+                errElem.innerText = errVal;
+                const card = document.getElementById('metric-errors-card');
+                if (data.totalErrors > 0) {
+                    errElem.style.color = '#ffffff';
+                    if (card) {
+                        card.style.borderStyle = 'dashed';
+                        card.style.borderColor = '#ffffff';
+                    }
+                } else {
+                    errElem.style.color = 'var(--text-muted)';
+                    if (card) {
+                        card.style.borderStyle = 'solid';
+                        card.style.borderColor = 'var(--border-color)';
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

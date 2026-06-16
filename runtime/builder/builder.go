@@ -76,10 +76,6 @@ func (b *Builder) Build(sourceFile string) (*BuildResult, error) {
 
 // buildRust compiles Rust code to WASM (requires cargo and wasm-pack).
 func (b *Builder) buildRust(sourceFile string) (*BuildResult, error) {
-	fileName := filepath.Base(sourceFile)
-	baseName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
-	outputFile := filepath.Join(b.cacheDir, baseName+".wasm")
-
 	// Check if cargo is available
 	if _, err := exec.LookPath("cargo"); err != nil {
 		return &BuildResult{
@@ -90,15 +86,15 @@ func (b *Builder) buildRust(sourceFile string) (*BuildResult, error) {
 
 	// For now, return placeholder (full implementation coming soon)
 	return &BuildResult{
-		Success:  true,
-		WASMFile: outputFile,
+		Success: false,
+		Error:   errors.New("Rust WASM compilation is not fully implemented yet"),
 	}, nil
 }
 
 // buildGo compiles Go code to WASM.
 func (b *Builder) buildGo(sourceFile string) (*BuildResult, error) {
 	return &BuildResult{
-		Success: true,
+		Success: false,
 		Error:   errors.New("Go WASM build coming soon"),
 	}, nil
 }
@@ -106,7 +102,7 @@ func (b *Builder) buildGo(sourceFile string) (*BuildResult, error) {
 // buildC compiles C code to WASM.
 func (b *Builder) buildC(sourceFile string) (*BuildResult, error) {
 	return &BuildResult{
-		Success: true,
+		Success: false,
 		Error:   errors.New("C WASM build coming soon"),
 	}, nil
 }

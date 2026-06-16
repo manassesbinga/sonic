@@ -1,4 +1,0 @@
-ok  	channelworkers/runtime	1.992s
-ok  	channelworkers/config	1.133s
-ok  	channelworkers/mitm	14.308s
-ok  	channelworkers/proxy	1.047s

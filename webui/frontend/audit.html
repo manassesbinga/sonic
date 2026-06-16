@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Admin Web UI - Auditoria</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+    <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 1rem; justify-content: space-between;">
+            <h3 class="card-title" style="display: flex; align-items: center; gap: 0.35rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Audit Trail Completo
+            </h3>
+            
+            <div class="filter-group" style="display: flex; gap: 0.5rem; max-width: 400px; width: 100%;">
+                <input type="text" id="audit-search" class="search-input" style="flex-grow: 1;" placeholder="Buscar por worker, url, status..." oninput="triggerAuditSearch()">
+                <button class="filter-btn" style="flex-shrink: 0;" onclick="loadAuditLogs()">Atualizar</button>
+            </div>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Worker</th>
+                        <th>Function</th>
+                        <th>Method</th>
+                        <th>URL</th>
+                        <th>Status</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-table-body">
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">Nenhum log de auditoria encontrado.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Script no final do body para injeção de layout -->
+    <script src="shared.js"></script>
+    <script>
+        let cachedAuditLogs = [];
+        const expandedAuditRows = new Set();
+
+        window.onPageInit = function() {
+            loadAuditLogs();
+        };
+
+        window.onPagePoll = function() {
+            loadAuditLogs();
+        };
+
+        function triggerAuditSearch() {
+            renderAuditLogs();
+        }
+
+        async function loadAuditLogs() {
+            const data = await window.fetchData('/api/audit');
+            if (data) {
+                cachedAuditLogs = data;
+                renderAuditLogs();
+            }
+        }
+
+        function toggleAuditRowDetails(id) {
+            const row = document.getElementById(`audit-details-${id}`);
+            if (row) {
+                if (row.style.display === 'none') {
+                    row.style.display = 'table-row';
+                    expandedAuditRows.add(id);
+                } else {
+                    row.style.display = 'none';
+                    expandedAuditRows.delete(id);
+                }
+            }
+        }
+
+        function renderAuditLogs() {
+            const tbody = document.getElementById('audit-table-body');
+            if (!tbody) return;
+
+            if (!cachedAuditLogs || cachedAuditLogs.length === 0) {
+                const emptyHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">Nenhum log de auditoria encontrado.</td></tr>`;
+                if (tbody.innerHTML !== emptyHTML) tbody.innerHTML = emptyHTML;
+                return;
+            }
+
+            const searchTerm = document.getElementById('audit-search').value.toLowerCase();
+            let filtered = cachedAuditLogs.filter(l => {
+                if (searchTerm) {
+                    const workerMatch = l.worker && l.worker.toLowerCase().includes(searchTerm);
+                    const urlMatch = l.url && l.url.toLowerCase().includes(searchTerm);
+                    const statusMatch = l.status && l.status.toLowerCase().includes(searchTerm);
+                    const methodMatch = l.method && l.method.toLowerCase().includes(searchTerm);
+                    const funcMatch = l.function && l.function.toLowerCase().includes(searchTerm);
+                    return workerMatch || urlMatch || statusMatch || methodMatch || funcMatch;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                const noMatchHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">Nenhum evento corresponde à busca efetuada.</td></tr>`;
+                tbody.innerHTML = noMatchHTML;
+                return;
+            }
+
+            const newHTML = filtered.map(e => {
+                const date = new Date(e.timestamp);
+                const timeStr = date.toLocaleString();
+
+                const statusBadge = e.status === 'success' 
+                    ? `<span class="status-badge success">Success</span>`
+                    : `<span class="status-badge error">Error</span>`;
+
+                const errorText = e.errorMsg ? `<div class="error-detail" style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; font-family: monospace;">${window.escapeHTML(e.errorMsg)}</div>` : '';
+
+                const isExpanded = expandedAuditRows.has(e.id);
+                const displayStyle = isExpanded ? 'table-row' : 'none';
+
+                const reqHeadersStr = e.headers ? JSON.stringify(e.headers, null, 2) : '{}';
+                const respHeadersStr = e.respHeaders ? JSON.stringify(e.respHeaders, null, 2) : '{}';
+
+                const detailsRow = `
+                    <tr id="audit-details-${e.id}" style="display: ${displayStyle}; background-color: #040406;">
+                        <td colspan="7" style="padding: 1.5rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; font-size: 0.85rem;">
+                                <!-- Request Headers/Body -->
+                                <div>
+                                    <h4 style="font-family: 'Outfit'; color: var(--color-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Audit Request Details</h4>
+                                    <div style="background-color: #000000; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #e2e8f0; line-height: 1.4;">
+<strong style="color: #a1a1aa;">Headers:</strong>
+${window.escapeHTML(reqHeadersStr)}
+
+<strong style="color: #a1a1aa;">Body:</strong>
+${window.escapeHTML(e.body || '(empty body)')}
+                                    </div>
+                                </div>
+                                <!-- Response Headers/Body -->
+                                <div>
+                                    <h4 style="font-family: 'Outfit'; color: var(--color-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Audit Response Details (Status: ${e.respStatus || 200})</h4>
+                                    <div style="background-color: #000000; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #e2e8f0; line-height: 1.4;">
+<strong style="color: #a1a1aa;">Headers:</strong>
+${window.escapeHTML(respHeadersStr)}
+
+<strong style="color: #a1a1aa;">Body:</strong>
+${window.escapeHTML(e.respBody || '(empty body)')}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Logs Adicionais de Auditoria -->
+                            ${e.logs && e.logs.length > 0 ? `
+                            <div style="margin-top: 1.25rem;">
+                                <h4 style="font-family: 'Outfit'; color: var(--color-warning); margin-bottom: 0.5rem; font-size: 0.85rem;">System Transition Logs</h4>
+                                <div style="background-color: #000000; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem;">
+                                    ${e.logs.map(l => {
+                                        const lDate = new Date(l.timestamp);
+                                        const lTime = lDate.toLocaleTimeString() + '.' + String(lDate.getMilliseconds()).padStart(3, '0');
+                                        const lvlClass = l.level.toLowerCase();
+                                        return `
+                                            <div style="display: flex; gap: 0.5rem; align-items: flex-start; line-height: 1.4;">
+                                                <span style="color: #52525b; flex-shrink: 0;">[${lTime}]</span>
+                                                <span class="status-badge ${lvlClass === 'error' ? 'error' : (lvlClass === 'warn' ? 'warning' : 'success')}" style="width: auto; font-weight: bold; flex-shrink: 0; text-transform: uppercase; padding: 0.05rem 0.3rem; font-size: 0.6rem; border-radius: 3px;">${window.escapeHTML(l.level)}</span>
+                                                <span style="color: #e4e4e7; word-break: break-all; white-space: pre-wrap;">${window.escapeHTML(l.message)}</span>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+
+                return `
+                    <tr style="transition: background-color 0.2s;">
+                        <td style="color: var(--text-muted); font-size: 0.8rem; font-family: monospace;">${timeStr}</td>
+                        <td style="font-weight: 500; font-family: 'Outfit'; color: #ffffff;">${window.escapeHTML(e.worker)}</td>
+                        <td><span style="color: ${e.function === 'onTraffic' ? 'var(--color-primary)' : '#10b981'}; font-weight: 500; font-family: monospace; font-size: 0.8rem;">${e.function}</span></td>
+                        <td><span style="font-family: monospace; font-weight: 600; color: var(--text-muted); font-size: 0.75rem; background-color: #18181b; padding: 0.15rem 0.35rem; border-radius: 4px; border: 1px solid var(--border-color);">${window.escapeHTML(e.method)}</span></td>
+                        <td><span style="font-family: monospace; color: var(--text-color); font-size: 0.85rem;">${window.escapeHTML(e.url)}</span></td>
+                        <td>${statusBadge}${errorText}</td>
+                        <td style="text-align: right;">
+                            <button class="filter-btn" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;" onclick="toggleAuditRowDetails('${e.id}')">
+                                ${isExpanded ? 'Ocultar' : 'Detalhes'}
+                            </button>
+                        </td>
+                    </tr>
+                    ${detailsRow}
+                `;
+            }).join('');
+
+            const currentHTML = tbody.innerHTML;
+            if (currentHTML !== newHTML) {
+                tbody.innerHTML = newHTML;
+            }
+        }
+    </script>
+</body>
+</html>

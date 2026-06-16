@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Admin Web UI - Edge Workers</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-success)"><path d="M12 2H2v10h10V2zM22 12H12v10h10V12zM12 7h10M2 17h10"/></svg>
+                Active Edge Workers
+            </h3>
+            <button class="auth-button" style="width: auto; padding: 0.5rem 1rem;" onclick="showNewWorkerForm()">+ Novo Worker</button>
+        </div>
+
+        <!-- Form para Criar/Editar Worker -->
+        <div id="worker-form-container" style="display: none; background-color: var(--surface-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 5px; margin-bottom: 1.5rem;">
+            <h4 id="worker-form-title" style="margin-bottom: 1rem; font-family: 'Outfit';">Criar Novo Edge Worker</h4>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Nome do Arquivo (deve terminar com .js)</label>
+                <input type="text" id="worker-filename" class="search-input" style="width: 100%;" placeholder="ex: meu_worker.js">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Código JavaScript do Worker</label>
+                <textarea id="worker-code" class="search-input" style="width: 100%; height: 320px; font-family: monospace; font-size: 0.85rem; padding: 0.5rem; white-space: pre; overflow-wrap: normal; overflow-x: auto; line-height: 1.4;" placeholder="// functions/meu_worker.js&#10;function onTraffic(request) {&#10;    log('Meu worker rodando!');&#10;    request.headers.set('X-Meu-Header', 'Sonic');&#10;    return request;&#10;}&#10;&#10;function onResponse(response) {&#10;    return response;&#10;}"></textarea>
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="btn-sidebar-action" style="border-color: transparent; width: auto; padding: 0.5rem 1rem;" onclick="hideWorkerForm()">Cancelar</button>
+                <button class="auth-button" style="width: auto; padding: 0.5rem 1.5rem;" onclick="saveWorker()">Guardar</button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Worker Name</th>
+                        <th>Size</th>
+                        <th>Active Handlers</th>
+                        <th style="text-align: right; padding-right: 1.5rem;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="workers-table-body">
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-muted);">Loading workers...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Script at the end of body -->
+    <script src="shared.js"></script>
+    <script>
+        window.onPageInit = function() {
+            pollWorkers();
+        };
+
+        window.onPagePoll = function() {
+            pollWorkers();
+        };
+
+        async function pollWorkers() {
+            const workers = await window.fetchData('/api/workers');
+            if (workers) {
+                updateWorkersTable(workers);
+            }
+        }
+
+        function updateWorkersTable(workers) {
+            const tbody = document.getElementById('workers-table-body');
+            if (!tbody) return;
+
+            if (!workers || workers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No worker files found in functions/</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = workers.map(w => {
+                let handlers = [];
+                if (w.onTraffic) handlers.push('<span style="color: var(--color-primary)">onTraffic</span>');
+                if (w.onResponse) handlers.push('<span style="color: var(--color-success)">onResponse</span>');
+                const handlersStr = handlers.length > 0 ? handlers.join(', ') : '<span style="color: var(--text-muted)">none</span>';
+
+                return `
+                    <tr>
+                        <td style="font-weight: 500; font-family: 'Outfit';">${window.escapeHTML(w.name)}</td>
+                        <td style="color: var(--text-muted);">${window.escapeHTML(w.size)}</td>
+                        <td>${handlersStr}</td>
+                        <td style="text-align: right; padding-right: 1.5rem;">
+                            <button class="filter-btn" style="border-color: var(--color-primary); color: var(--color-primary); margin-right: 0.25rem; padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="editWorker('${window.escapeHTML(w.name)}')">Editar</button>
+                            <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error); padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteWorker('${window.escapeHTML(w.name)}')">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function showNewWorkerForm() {
+            document.getElementById('worker-form-title').innerText = "Criar Novo Edge Worker";
+            document.getElementById('worker-filename').value = "";
+            document.getElementById('worker-filename').disabled = false;
+            document.getElementById('worker-code').value = "";
+            document.getElementById('worker-form-container').style.display = 'block';
+            document.getElementById('worker-filename').focus();
+        }
+
+        function hideWorkerForm() {
+            document.getElementById('worker-form-container').style.display = 'none';
+        }
+
+        async function saveWorker() {
+            const name = document.getElementById('worker-filename').value.trim();
+            const code = document.getElementById('worker-code').value;
+
+            if (!name) {
+                alert("Por favor insira o nome do arquivo do Worker.");
+                return;
+            }
+
+            const res = await fetch('/api/workers', {
+                method: 'POST',
+                headers: window.getHeaders(),
+                body: JSON.stringify({ name, code })
+            });
+
+            if (res.ok) {
+                hideWorkerForm();
+                pollWorkers();
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                alert("Erro ao salvar worker: " + (errData.error || "Erro desconhecido"));
+            }
+        }
+
+        async function editWorker(name) {
+            const data = await window.fetchData(`/api/workers?name=${encodeURIComponent(name)}`);
+            if (data) {
+                document.getElementById('worker-form-title').innerText = "Editar Edge Worker";
+                document.getElementById('worker-filename').value = data.name;
+                document.getElementById('worker-filename').disabled = true;
+                document.getElementById('worker-code').value = data.code;
+                document.getElementById('worker-form-container').style.display = 'block';
+                document.getElementById('worker-code').focus();
+            }
+        }
+
+        async function deleteWorker(name) {
+            if (confirm(`Pretende apagar o worker "${name}"?`)) {
+                const res = await fetch(`/api/workers?name=${encodeURIComponent(name)}`, {
+                    method: 'DELETE',
+                    headers: window.getHeaders()
+                });
+                if (res.ok) {
+                    pollWorkers();
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    alert("Erro ao excluir worker: " + (errData.error || "Erro desconhecido"));
+                }
+            }
+        }
+    </script>
+</body>
+</html>

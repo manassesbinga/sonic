@@ -52,14 +52,6 @@ type Config struct {
 		Failsafe string `mapstructure:"failsafe"`
 	} `mapstructure:"runtime"`
 
-	// Logging configures log output.
-	Logging struct {
-		// Level is "debug", "info", "warn", or "error" (default: "info").
-		Level string `mapstructure:"level"`
-		// Format is "json" or "text" (default: "text").
-		Format string `mapstructure:"format"`
-	} `mapstructure:"logging"`
-
 	// Telemetry configures observability (OpenTelemetry + Prometheus).
 	Telemetry struct {
 		// Enabled enables the telemetry system (default: false).
@@ -72,9 +64,31 @@ type Config struct {
 		Metrics bool `mapstructure:"metrics"`
 		// MetricsPath is the HTTP path for Prometheus metrics (default: "/metrics").
 		MetricsPath string `mapstructure:"metrics_path"`
-		// MetricsPort is the HTTP port for the metrics server (default: 9090).
+		// MetricsPort is the HTTP port for the Prometheus metrics server (default: 9090).
 		MetricsPort int `mapstructure:"metrics_port"`
 	} `mapstructure:"telemetry"`
+
+	// Security configures the CVE and vulnerability scanning.
+	Security struct {
+		// Enabled enables payload vulnerability scanning (default: true).
+		Enabled bool `mapstructure:"enabled"`
+		// Block enables blocking of requests that match CVE patterns (default: true).
+		Block bool `mapstructure:"block"`
+		// RawTCPTimeoutMS is the initial read timeout for raw TCP connections (default: 100ms).
+		RawTCPTimeoutMS int `mapstructure:"raw_tcp_timeout_ms"`
+	} `mapstructure:"security"`
+
+	// WebUI configures the secure administrative Web dashboard.
+	WebUI struct {
+		// Enabled enables the Web UI server (default: true).
+		Enabled bool `mapstructure:"enabled"`
+		// Port is the HTTP port for the Web UI (default: 9091).
+		Port int `mapstructure:"port"`
+		// Token is the static access token. If empty, a secure token is generated on startup.
+		Token string `mapstructure:"token"`
+		// TLSEnabled enables HTTPS using the internal MITM CA (default: false).
+		TLSEnabled bool `mapstructure:"tls_enabled"`
+	} `mapstructure:"webui"`
 }
 
 // LoadConfig reads configuration from a YAML file and environment variables.
@@ -92,14 +106,18 @@ func LoadConfig(configPath string) (*Config, error) {
 	cfg.Runtime.TimeoutMS = 50
 	cfg.Runtime.PoolSize = 64
 	cfg.Runtime.Failsafe = "bypass"
-	cfg.Logging.Level = "info"
-	cfg.Logging.Format = "text"
 	cfg.Telemetry.Enabled = false
 	cfg.Telemetry.Traces = true
 	cfg.Telemetry.TracesEndpoint = "http://localhost:4318"
 	cfg.Telemetry.Metrics = true
 	cfg.Telemetry.MetricsPath = "/metrics"
 	cfg.Telemetry.MetricsPort = 9090
+	cfg.Security.Enabled = true
+	cfg.Security.Block = true
+	cfg.Security.RawTCPTimeoutMS = 100
+	cfg.WebUI.Enabled = true
+	cfg.WebUI.Port = 9091
+	cfg.WebUI.Token = ""
 
 	viper.Reset()
 
@@ -107,11 +125,32 @@ func LoadConfig(configPath string) (*Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
+	_ = viper.BindEnv("listen_port", "SONIC_LISTEN_PORT")
+	_ = viper.BindEnv("mode", "SONIC_MODE")
+	_ = viper.BindEnv("tls.ca_dir", "SONIC_TLS_CA_DIR")
+	_ = viper.BindEnv("tls.auto_generate", "SONIC_TLS_AUTO_GENERATE")
+	_ = viper.BindEnv("runtime.timeout_ms", "SONIC_RUNTIME_TIMEOUT_MS")
+	_ = viper.BindEnv("runtime.pool_size", "SONIC_RUNTIME_POOL_SIZE")
+	_ = viper.BindEnv("runtime.failsafe", "SONIC_RUNTIME_FAILSAFE")
+	_ = viper.BindEnv("telemetry.enabled", "SONIC_TELEMETRY_ENABLED")
+	_ = viper.BindEnv("telemetry.traces", "SONIC_TELEMETRY_TRACES")
+	_ = viper.BindEnv("telemetry.traces_endpoint", "SONIC_TELEMETRY_TRACES_ENDPOINT")
+	_ = viper.BindEnv("telemetry.metrics", "SONIC_TELEMETRY_METRICS")
+	_ = viper.BindEnv("telemetry.metrics_path", "SONIC_TELEMETRY_METRICS_PATH")
+	_ = viper.BindEnv("telemetry.metrics_port", "SONIC_TELEMETRY_METRICS_PORT")
+	_ = viper.BindEnv("security.enabled", "SONIC_SECURITY_ENABLED")
+	_ = viper.BindEnv("security.block", "SONIC_SECURITY_BLOCK")
+	_ = viper.BindEnv("security.raw_tcp_timeout_ms", "SONIC_SECURITY_RAW_TCP_TIMEOUT_MS")
+	_ = viper.BindEnv("webui.enabled", "SONIC_WEBUI_ENABLED")
+	_ = viper.BindEnv("webui.port", "SONIC_WEBUI_PORT")
+	_ = viper.BindEnv("webui.token", "SONIC_WEBUI_TOKEN")
+	_ = viper.BindEnv("webui.tls_enabled", "SONIC_WEBUI_TLS_ENABLED")
+
 	if configPath != "" {
 		viper.SetConfigFile(configPath)
 	} else {
 		viper.AddConfigPath(".")
-		viper.SetConfigName("channelworkers")
+		viper.SetConfigName("sonic")
 		viper.SetConfigType("yaml")
 	}
 
@@ -143,6 +182,21 @@ func (c *Config) Validate() error {
 	if c.Runtime.Failsafe != "bypass" && c.Runtime.Failsafe != "block" {
 		return fmt.Errorf("failsafe runtime invalido: %s", c.Runtime.Failsafe)
 	}
+	if c.Runtime.TimeoutMS <= 0 {
+		return fmt.Errorf("runtime.timeout_ms deve ser maior que 0")
+	}
+	if c.Runtime.PoolSize <= 0 {
+		return fmt.Errorf("runtime.pool_size deve ser maior que 0")
+	}
+	if c.WebUI.Enabled && (c.WebUI.Port <= 0 || c.WebUI.Port > 65535) {
+		return fmt.Errorf("webui.port invalida: %d", c.WebUI.Port)
+	}
+	if c.Security.Enabled && c.Security.RawTCPTimeoutMS <= 0 {
+		return fmt.Errorf("security.raw_tcp_timeout_ms deve ser maior que 0")
+	}
+	if c.TLS.CADir == "" {
+		return fmt.Errorf("tls.ca_dir nao pode estar vazia")
+	}
 	return nil
 }
 
@@ -165,14 +219,15 @@ runtime:
   pool_size: 64
   failsafe: "bypass"
 
+security:
+  enabled: true
+  block: true
+  raw_tcp_timeout_ms: 100
+
 bypass_domains:
   - "*.stripe.com"
   - "*.amazonaws.com"
   - "*.apple.com"
-
-logging:
-  level: "info"
-  format: "text"
 
 telemetry:
   enabled: false
@@ -181,6 +236,11 @@ telemetry:
   metrics: true
   metrics_path: "/metrics"
   metrics_port: 9090
+
+webui:
+  enabled: true
+  port: 9091
+  token: ""
 `
 	filePath := filepath.Join(dir, "sonic.yaml")
 	return os.WriteFile(filePath, []byte(content), 0644)

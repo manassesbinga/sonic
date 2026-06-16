@@ -18,6 +18,10 @@ type Metrics struct {
 	ErrorsTotal           metric.Int64Counter
 	CertGenDuration       metric.Float64Histogram
 	BytesTransferred      metric.Int64Counter
+	// Neural Cache metrics
+	NeuralCacheHits       metric.Int64Counter
+	NeuralCacheMisses     metric.Int64Counter
+	NeuralCacheEvictions  metric.Int64Counter
 }
 
 func NewMeterProviderMetrics(mp metric.MeterProvider) (*Metrics, error) {
@@ -104,6 +108,33 @@ func NewMeterProviderMetrics(mp metric.MeterProvider) (*Metrics, error) {
 		return nil, err
 	}
 
+	neuralCacheHits, err := meter.Int64Counter(
+		"sonic.neuralcache.hits",
+		metric.WithDescription("Total Neural Cache hits"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	neuralCacheMisses, err := meter.Int64Counter(
+		"sonic.neuralcache.misses",
+		metric.WithDescription("Total Neural Cache misses"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	neuralCacheEvictions, err := meter.Int64Counter(
+		"sonic.neuralcache.evictions",
+		metric.WithDescription("Total Neural Cache evictions"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Metrics{
 		RequestsTotal:         requestsTotal,
 		RequestDuration:       requestDuration,
@@ -114,6 +145,9 @@ func NewMeterProviderMetrics(mp metric.MeterProvider) (*Metrics, error) {
 		ErrorsTotal:           errorsTotal,
 		CertGenDuration:       certGenDuration,
 		BytesTransferred:      bytesTransferred,
+		NeuralCacheHits:       neuralCacheHits,
+		NeuralCacheMisses:     neuralCacheMisses,
+		NeuralCacheEvictions:  neuralCacheEvictions,
 	}, nil
 }
 
@@ -157,4 +191,52 @@ func RecordError(m *Metrics, ctx context.Context, errType, domain string) {
 			attribute.String("sonic.domain", domain),
 		),
 	)
+}
+
+func RecordNeuralCacheHit(m *Metrics, ctx context.Context, domain string) {
+	if m == nil {
+		return
+	}
+	m.NeuralCacheHits.Add(ctx, 1,
+		metric.WithAttributes(attribute.String("sonic.domain", domain)),
+	)
+}
+
+func RecordNeuralCacheMiss(m *Metrics, ctx context.Context, domain string) {
+	if m == nil {
+		return
+	}
+	m.NeuralCacheMisses.Add(ctx, 1,
+		metric.WithAttributes(attribute.String("sonic.domain", domain)),
+	)
+}
+
+func RecordNeuralCacheEviction(m *Metrics, ctx context.Context, domain string) {
+	if m == nil {
+		return
+	}
+	m.NeuralCacheEvictions.Add(ctx, 1,
+		metric.WithAttributes(attribute.String("sonic.domain", domain)),
+	)
+}
+
+func RecordWASMDuration(m *Metrics, ctx context.Context, duration time.Duration) {
+	if m == nil {
+		return
+	}
+	m.WASMExecutionDuration.Record(ctx, float64(duration.Microseconds())/1000.0)
+}
+
+func RecordCertGenDuration(m *Metrics, ctx context.Context, duration time.Duration) {
+	if m == nil {
+		return
+	}
+	m.CertGenDuration.Record(ctx, float64(duration.Microseconds())/1000.0)
+}
+
+func RecordBytesTransferred(m *Metrics, ctx context.Context, bytes int64) {
+	if m == nil {
+		return
+	}
+	m.BytesTransferred.Add(ctx, bytes)
 }

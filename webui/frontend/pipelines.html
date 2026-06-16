@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Admin Web UI - Pipelines</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title" style="color: var(--color-primary)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Visual Pipeline Builder
+            </h3>
+            <button class="auth-button" style="width: auto; padding: 0.5rem 1rem;" onclick="showNewPipelineForm()">+ Novo Pipeline</button>
+        </div>
+        
+        <!-- Form para Criar/Editar Pipeline -->
+        <div id="pipeline-form-container" style="display: none; background-color: var(--surface-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 5px; margin-bottom: 1rem;">
+            <h4 id="pipeline-form-title" style="margin-bottom: 1rem; font-family: 'Outfit';">Criar Novo Pipeline</h4>
+            <div class="form-grid-pipeline-id">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">ID do Pipeline (sem espaços)</label>
+                    <input type="text" id="pipe-id" class="search-input" style="width: 100%;" placeholder="ex: api-waf">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Nome Amigável</label>
+                    <input type="text" id="pipe-name" class="search-input" style="width: 100%;" placeholder="ex: Regras WAF de API">
+                </div>
+            </div>
+            <div class="form-grid-pipeline-pattern">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Padrão de URL (Host + Path, aceita *)</label>
+                    <input type="text" id="pipe-pattern" class="search-input" style="width: 100%;" placeholder="ex: api.exemplo.com/v1/*">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Métodos (ex: GET,POST ou deixe vazio para todos)</label>
+                    <input type="text" id="pipe-methods" class="search-input" style="width: 100%;" placeholder="GET,POST">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.875rem; font-weight: bold; margin-bottom: 0.5rem;">Passos do Middleware (Ordem de Execução)</label>
+                <div id="pipeline-steps-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <!-- Passos serão inseridos dinamicamente aqui -->
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="filter-btn" onclick="addPipelineStep('cve_scanner')">+ WAF CVE Scanner</button>
+                    <button class="filter-btn" onclick="addPipelineStep('rate_limiter')">+ Rate Limiter</button>
+                    <button class="filter-btn" onclick="addPipelineStep('worker')">+ Edge Worker (JS)</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
+                    <input type="checkbox" id="pipe-enabled" checked> Pipeline Ativo
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="btn-sidebar-action" style="border-color: transparent; width: auto; padding: 0.5rem 1rem;" onclick="hidePipelineForm()">Cancelar</button>
+                <button class="auth-button" style="width: auto; padding: 0.5rem 1.5rem;" onclick="savePipeline()">Guardar</button>
+            </div>
+        </div>
+
+        <!-- Tabela de Pipelines Existentes -->
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome / ID</th>
+                        <th>URL Pattern</th>
+                        <th>Métodos</th>
+                        <th>Passos Middleware</th>
+                        <th>Status</th>
+                        <th style="text-align: right; padding-right: 1.5rem;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="pipelines-table-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted);">Não há pipelines configurados. Crie um novo acima.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Script at the end of body -->
+    <script src="shared.js"></script>
+    <script>
+        let currentPipelineSteps = [];
+        let loadedWorkers = [];
+
+        window.onPageInit = function() {
+            loadPipelines();
+        };
+
+        window.onPagePoll = function() {
+            loadPipelines();
+        };
+
+        async function loadPipelines() {
+            const pipes = await window.fetchData('/api/pipelines');
+            const workers = await window.fetchData('/api/workers');
+            if (workers) {
+                loadedWorkers = workers;
+            }
+            updatePipelinesTable(pipes);
+        }
+
+        function updatePipelinesTable(pipelines) {
+            const tbody = document.getElementById('pipelines-table-body');
+            if (!tbody) return;
+
+            if (!pipelines || pipelines.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Não há pipelines configurados. Crie um novo acima.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = pipelines.map(p => {
+                const statusBadge = p.enabled 
+                    ? `<span class="status-badge success">Ativo</span>` 
+                    : `<span class="status-badge warning">Inativo</span>`;
+                
+                const stepsStr = p.steps && p.steps.length > 0 
+                    ? p.steps.map(s => {
+                        let badgeColor = 'var(--color-primary)';
+                        let label = s.type;
+                        if (s.type === 'cve_scanner') {
+                            badgeColor = 'var(--color-error)';
+                            label = 'WAF Shield';
+                        } else if (s.type === 'rate_limiter') {
+                            badgeColor = 'var(--color-warning)';
+                            label = `Rate Limit (${s.limit}r)`;
+                        } else if (s.type === 'worker') {
+                            badgeColor = 'var(--color-success)';
+                            label = s.name;
+                        }
+                        return `<span class="status-badge" style="background: rgba(255,255,255,0.03); color: ${badgeColor}; border-color: rgba(255,255,255,0.08); font-size: 0.65rem; margin-right: 0.25rem;">${label}</span>`;
+                      }).join('')
+                    : '<em>Nenhum passo</em>';
+
+                return `
+                    <tr>
+                        <td style="font-weight: 600; font-family: 'Outfit';">${window.escapeHTML(p.name)} <br><small style="color: var(--text-muted); font-weight: normal; font-family: monospace;">${window.escapeHTML(p.id)}</small></td>
+                        <td style="font-family: monospace; color: var(--color-secondary); font-size: 0.8rem;">${window.escapeHTML(p.pattern)}</td>
+                        <td style="font-size: 0.8rem; font-weight: bold;">${p.methods && p.methods.length > 0 ? window.escapeHTML(p.methods.join(', ')) : '*'}</td>
+                        <td>${stepsStr}</td>
+                        <td>${statusBadge}</td>
+                        <td style="text-align: right; padding-right: 1rem;">
+                            <button class="filter-btn" style="border-color: var(--color-primary); color: var(--color-primary); margin-right: 0.25rem;" onclick="editPipeline('${p.id}')">Editar</button>
+                            <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error);" onclick="deletePipeline('${p.id}')">Apagar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function showNewPipelineForm() {
+            document.getElementById('pipeline-form-title').innerText = "Criar Novo Pipeline";
+            document.getElementById('pipe-id').value = "";
+            document.getElementById('pipe-id').disabled = false;
+            document.getElementById('pipe-name').value = "";
+            document.getElementById('pipe-pattern').value = "";
+            document.getElementById('pipe-methods').value = "";
+            document.getElementById('pipe-enabled').checked = true;
+            currentPipelineSteps = [];
+            renderPipelineSteps();
+            document.getElementById('pipeline-form-container').style.display = 'block';
+        }
+
+        function hidePipelineForm() {
+            document.getElementById('pipeline-form-container').style.display = 'none';
+        }
+
+        function addPipelineStep(type) {
+            if (type === 'cve_scanner') {
+                currentPipelineSteps.push({ type: 'cve_scanner', enabled: true });
+            } else if (type === 'rate_limiter') {
+                currentPipelineSteps.push({ type: 'rate_limiter', enabled: true, limit: 100, window: 60000 });
+            } else if (type === 'worker') {
+                const workerName = loadedWorkers.length > 0 ? loadedWorkers[0].name : 'worker.js';
+                currentPipelineSteps.push({ type: 'worker', enabled: true, name: workerName });
+            }
+            renderPipelineSteps();
+        }
+
+        function removePipelineStep(idx) {
+            currentPipelineSteps.splice(idx, 1);
+            renderPipelineSteps();
+        }
+
+        function renderPipelineSteps() {
+            const container = document.getElementById('pipeline-steps-list');
+            if (currentPipelineSteps.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1rem; border: 1px dashed var(--border-color); border-radius: 5px;">Nenhum passo adicionado. Use os botões abaixo para adicionar middlewares.</div>`;
+                return;
+            }
+
+            container.innerHTML = currentPipelineSteps.map((step, idx) => {
+                let innerHTML = '';
+                if (step.type === 'cve_scanner') {
+                    innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: #000000; border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 5px;">
+                            <span style="color: var(--text-color); font-weight: bold; font-family: 'Outfit'; font-size: 0.9rem;">Passo ${idx+1}: WAF CVE Stream Shield</span>
+                            <button class="filter-btn" style="border-color: var(--border-color); color: var(--text-muted); padding: 0.2rem 0.5rem;" onclick="removePipelineStep(${idx})">Remover</button>
+                        </div>
+                    `;
+                } else if (step.type === 'rate_limiter') {
+                    innerHTML = `
+                        <div style="display: flex; flex-direction: column; background: #000000; border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 5px; gap: 0.5rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                                <span style="color: var(--text-color); font-weight: bold; font-family: 'Outfit'; font-size: 0.9rem;">Passo ${idx+1}: Rate Limiter Persistente</span>
+                                <button class="filter-btn" style="border-color: var(--border-color); color: var(--text-muted); padding: 0.2rem 0.5rem;" onclick="removePipelineStep(${idx})">Remover</button>
+                            </div>
+                            <div class="form-grid-2col" style="gap: 0.5rem; margin-bottom: 0;">
+                                <div>
+                                    <label style="font-size: 0.75rem; color: var(--text-muted);">Limite de Pedidos</label>
+                                    <input type="number" class="search-input" style="width:100%;" value="${step.limit}" onchange="currentPipelineSteps[${idx}].limit = parseInt(this.value)">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; color: var(--text-muted);">Janela de Tempo (ms)</label>
+                                    <input type="number" class="search-input" style="width:100%;" value="${step.window}" onchange="currentPipelineSteps[${idx}].window = parseInt(this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (step.type === 'worker') {
+                    const options = loadedWorkers.map(w => `<option value="${w.name}" ${step.name === w.name ? 'selected' : ''}>${w.name}</option>`).join('');
+                    innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: #000000; border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 5px;">
+                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; flex: 1;">
+                                <span style="color: var(--text-color); font-weight: bold; font-family: 'Outfit'; font-size: 0.9rem; flex-shrink: 0;">Passo ${idx+1}: Edge Worker</span>
+                                <select class="search-input" style="width: 200px; max-width: 100%; padding: 0.2rem 0.5rem;" onchange="currentPipelineSteps[${idx}].name = this.value">
+                                    ${options}
+                                </select>
+                            </div>
+                            <button class="filter-btn" style="border-color: var(--border-color); color: var(--text-muted); padding: 0.2rem 0.5rem;" onclick="removePipelineStep(${idx})">Remover</button>
+                        </div>
+                    `;
+                }
+                return innerHTML;
+            }).join('');
+        }
+
+        async function savePipeline() {
+            const id = document.getElementById('pipe-id').value.trim();
+            const name = document.getElementById('pipe-name').value.trim();
+            const pattern = document.getElementById('pipe-pattern').value.trim();
+            const methodsStr = document.getElementById('pipe-methods').value.trim();
+            const enabled = document.getElementById('pipe-enabled').checked;
+
+            if (!id || !name || !pattern) {
+                alert("Por favor preencha o ID, Nome e Padrão URL.");
+                return;
+            }
+
+            const methods = methodsStr ? methodsStr.split(',').map(m => m.trim().toUpperCase()) : [];
+
+            const pipeline = {
+                id,
+                name,
+                pattern,
+                methods,
+                steps: currentPipelineSteps,
+                enabled
+            };
+
+            const res = await fetch('/api/pipelines', {
+                method: 'POST',
+                headers: window.getHeaders(),
+                body: JSON.stringify(pipeline)
+            });
+
+            if (res.ok) {
+                hidePipelineForm();
+                loadPipelines();
+            } else {
+                alert("Erro ao guardar pipeline.");
+            }
+        }
+
+        async function deletePipeline(id) {
+            if (confirm(`Pretende apagar o pipeline "${id}"?`)) {
+                const res = await fetch(`/api/pipelines?id=${id}`, {
+                    method: 'DELETE',
+                    headers: window.getHeaders()
+                });
+                if (res.ok) {
+                    loadPipelines();
+                } else {
+                    alert("Erro ao apagar pipeline.");
+                }
+            }
+        }
+
+        async function editPipeline(id) {
+            const pipes = await window.fetchData('/api/pipelines');
+            const p = pipes.find(x => x.id === id);
+            if (p) {
+                showNewPipelineForm();
+                document.getElementById('pipeline-form-title').innerText = "Editar Pipeline";
+                document.getElementById('pipe-id').value = p.id;
+                document.getElementById('pipe-id').disabled = true;
+                document.getElementById('pipe-name').value = p.name;
+                document.getElementById('pipe-pattern').value = p.pattern;
+                document.getElementById('pipe-methods').value = p.methods ? p.methods.join(',') : '';
+                document.getElementById('pipe-enabled').checked = p.enabled;
+                currentPipelineSteps = p.steps || [];
+                renderPipelineSteps();
+            }
+        }
+    </script>
+</body>
+</html>

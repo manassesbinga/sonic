@@ -40,11 +40,13 @@ func (l *EBPFLoader) LoadSockmap() error {
 	fmt.Println("[INFO] Vinculando Sockops ao Cgroup raiz do sistema...")
 	fmt.Println("[INFO] eBPF Sockmap carregado e ativo no Kernel com sucesso!")
 
+	SetActive(true)
 	return nil
 }
 
 // Unload descarrega graciosamente os programas e links do Kernel.
 func (l *EBPFLoader) Unload() {
+	SetActive(false)
 	if l.sockopsLink != nil {
 		l.sockopsLink.Close()
 	}

@@ -5,222 +5,147 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/olekukonko/tablewriter"
+	"charm.land/lipgloss/v2"
 )
 
 var (
-	reset  = "\033[0m"
-	bold   = "\033[1m"
-	red    = "\033[31m"
-	green  = "\033[32m"
-	yellow = "\033[33m"
-	blue   = "\033[34m"
-	cyanC  = "\033[36m"
-	magenta = "\033[35m"
-)
+	ocGreen  = lipgloss.Color("#50fa7b")
+	ocText   = lipgloss.Color("#d2d2d2")
+	ocDim    = lipgloss.Color("#8b8b8b")
+	ocBorder = lipgloss.Color("#383838")
+	ocRed    = lipgloss.Color("#ff5555")
 
-func color(s, c string) string {
-	if c == "" || s == "" {
-		return s
-	}
-	return c + s + reset
-}
-
-func Red(s string) string     { return color(s, red) }
-func Green(s string) string   { return color(s, green) }
-func Yellow(s string) string  { return color(s, yellow) }
-func Blue(s string) string    { return color(s, blue) }
-func Cyan(s string) string    { return color(s, cyanC) }
-func Magenta(s string) string { return color(s, magenta) }
-func Bold(s string) string    { return color(s, bold) }
-
-var (
-	StyleHeader = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#00ADD8")).
-			PaddingLeft(2).
-			PaddingRight(2)
-
-	StyleSuccess = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#00FF00")).
+	StylePrimary = lipgloss.NewStyle().
+			Foreground(ocGreen).
 			Bold(true)
 
-	StyleError = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF0000")).
+	StyleAccent = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#3fb950")).
 			Bold(true)
 
 	StyleWarning = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFF00"))
+			Foreground(lipgloss.Color("#d29922"))
 
-	StyleInfo = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#87CEEB"))
+	StyleError = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#f85149")).
+			Bold(true)
 
-	StyleKey = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FFD700"))
+	StyleMuted = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#8b949e"))
 
-	StyleValue = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF"))
+	StyleText = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#e6edf3"))
 
-	StyleBox = lipgloss.NewStyle().
+	StyleCyan = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#39d2c0"))
+
+	StyleBold = lipgloss.NewStyle().Bold(true)
+
+	bannerStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#58a6ff")).
+			Padding(1, 3).
+			Width(48).
+			Align(lipgloss.Center)
+
+	statusBoxStyle = lipgloss.NewStyle().
+			Padding(0, 2).
+			Width(50)
+
+	sectionStyle = lipgloss.NewStyle().
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("#00ADD8")).
-			Padding(1, 2)
+			BorderTop(true).
+			BorderBottom(true).
+			BorderForeground(lipgloss.Color("#30363d")).
+			Padding(0, 2).
+			Width(60).
+			Align(lipgloss.Center)
 
-	StyleSection = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FF69B4")).
-			Underline(true)
+	kvStyle = lipgloss.NewStyle().
+			PaddingLeft(4)
+
+	kvKeyStyle = StylePrimary.Copy().
+			Width(18).
+			Align(lipgloss.Right).
+			PaddingRight(1)
 )
 
-func success(msg string) {
-	fmt.Fprintln(os.Stderr, Green("✓")+" "+msg)
-}
+func Primary(s string) string { return StylePrimary.Render(s) }
+func Accent(s string) string   { return StyleAccent.Render(s) }
+func Warning(s string) string  { return StyleWarning.Render(s) }
+func Error(s string) string    { return StyleError.Render(s) }
+func Muted(s string) string    { return StyleMuted.Render(s) }
+func Text(s string) string     { return StyleText.Render(s) }
+func Cyan(s string) string     { return StyleCyan.Render(s) }
+func Bold(s string) string     { return StyleBold.Render(s) }
 
-func SuccessBox(msg string) {
-	box := StyleBox.Render(StyleSuccess.Render("✓ ") + msg)
-	fmt.Fprintln(os.Stderr, box)
-}
-
-func warn(msg string) {
-	fmt.Fprintln(os.Stderr, Yellow("⚠")+" "+msg)
-}
-
-func info(msg string) {
-	fmt.Fprintln(os.Stderr, Cyan("ℹ")+" "+msg)
-}
+func success(msg string) { writeLog("SUCCESS", msg) }
+func warn(msg string)    { writeLog("WARN", msg) }
+func info(msg string)    { writeLog("INFO", msg) }
 
 func fail(msg string) {
-	fmt.Fprintln(os.Stderr, Red("✗")+" "+msg)
-}
-
-func ErrorBox(msg string) {
-	box := StyleBox.Render(StyleError.Render("✗ ") + msg)
-	fmt.Fprintln(os.Stderr, box)
+	writeLog("ERROR", msg)
+	b := statusBoxStyle.Copy().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#f85149")).
+		Foreground(lipgloss.Color("#f85149")).
+		Render(msg)
+	fmt.Fprintln(os.Stderr, b)
 }
 
 func Section(title string) {
 	fmt.Println()
-	fmt.Println("  " + StyleSection.Render(title))
-	fmt.Println()
+	b := lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#30363d")).
+		Padding(0, 2).
+		Render(StylePrimary.Render(title))
+	fmt.Println("  " + b)
 }
 
 func KeyValue(key, value string) {
-	fmt.Printf("    %s %s\n", StyleKey.Render(fmt.Sprintf("%-12s", key+":")), StyleValue.Render(value))
+	line := lipgloss.JoinHorizontal(lipgloss.Left,
+		kvKeyStyle.Render(key+":"),
+		StyleText.Render(value),
+	)
+	fmt.Println(kvStyle.Render(line))
 }
 
 func KeyValueStatus(key, value string, ok bool) {
-	status := Green("✓")
+	status := LipglossColor("#3fb950", "active")
 	if !ok {
-		status = Red("✗")
+		status = LipglossColor("#f85149", "inactive")
 	}
-	fmt.Printf("    %s %s %s\n", StyleKey.Render(fmt.Sprintf("%-12s", key+":")), StyleValue.Render(value), status)
-}
-
-func NewTable() *tablewriter.Table {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetBorder(false)
-	table.SetTablePadding("  ")
-	table.SetNoWhiteSpace(true)
-	return table
-}
-
-func NewPrettyTable(headers []string) *tablewriter.Table {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader(headers)
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetHeaderAlignment(tablewriter.ALIGN_CENTER)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("│")
-	table.SetColumnSeparator("│")
-	table.SetRowSeparator("─")
-	table.SetHeaderLine(true)
-	table.SetBorder(true)
-	table.SetTablePadding("  ")
-	table.SetHeaderColor(
-		tablewriter.Colors{tablewriter.Bold, tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.Bold, tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.Bold, tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.Bold, tablewriter.FgCyanColor},
+	line := lipgloss.JoinHorizontal(lipgloss.Left,
+		kvKeyStyle.Render(key+":"),
+		StyleText.Render(value),
+		StyleMuted.Render("  ("+status+")"),
 	)
-	return table
+	fmt.Println(kvStyle.Render(line))
 }
 
-func PrintKeyValuePairs(title string, pairs [][2]string) {
-	if title != "" {
-		Section(title)
-	}
-	maxKeyLen := 0
-	for _, p := range pairs {
-		if len(p[0]) > maxKeyLen {
-			maxKeyLen = len(p[0])
-		}
-	}
-	for _, p := range pairs {
-		key := fmt.Sprintf("%-*s", maxKeyLen, p[0])
-		KeyValue(key, p[1])
-	}
+func LipglossColor(color, text string) string {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(text)
 }
 
-func PrintBox(title, content string) {
-	styledTitle := StyleHeader.Render(title)
-	fullContent := styledTitle + "\n\n" + content
-	fmt.Println(StyleBox.Render(fullContent))
-}
 
 func PrintBanner(version string) {
-	banner := `
-  ╔══════════════════════════════════════════════════════╗
-  ║                     %s                           ║
-  ║  Multi-Language, Multi-Protocol Edge Engine       ║
-  ║  eBPF-accelerated | KV Store | WASM/JS/Native ║
-  ╚══════════════════════════════════════════════════════╝
-`
-	fmt.Printf(Cyan(banner), Bold("SONIC v"+version))
+	fmt.Println()
+	content := StyleCyan.Bold(true).Render("SONIC v"+version) + "\n" +
+		StyleMuted.Render("Multi-Language, Multi-Protocol Edge Engine") + "\n" +
+		StyleMuted.Render("eBPF-accelerated  KV Store  WASM/JS/Native")
+	fmt.Println(bannerStyle.Render(content))
+	fmt.Println()
 }
 
-func PrintCheckmark(text string) {
-	fmt.Printf("  %s %s\n", Green("✓"), text)
-}
-
-func PrintCross(text string) {
-	fmt.Printf("  %s %s\n", Red("✗"), text)
-}
-
-func PrintArrow(text string) {
-	fmt.Printf("  %s %s\n", Cyan("▶"), text)
-}
-
-func PrintBullet(text string) {
-	fmt.Printf("  %s %s\n", Yellow("•"), text)
-}
-
-func HR() {
-	width := 60
-	fmt.Println("  " + strings.Repeat("─", width))
-}
+func PrintArrow(text string)  { fmt.Println("  " + text) }
+func PrintBullet(text string) { fmt.Println("  " + text) }
+func HR()                     { fmt.Println() }
 
 func HRWithLabel(label string) {
-	width := 60
-	labelLen := len(label) + 4
-	if labelLen >= width {
-		fmt.Println("  " + label)
-		return
-	}
-	dashLen := (width - labelLen) / 2
-	left := strings.Repeat("─", dashLen)
-	right := strings.Repeat("─", width-labelLen-dashLen)
-	fmt.Printf("  %s[ %s ]%s\n", left, Bold(label), right)
+	fmt.Println()
+	fmt.Println("  " + sectionStyle.Render(StylePrimary.Render(label)))
+	fmt.Println()
 }
 
 func formatSize(bytes int64) string {
@@ -235,3 +160,57 @@ func formatSize(bytes int64) string {
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
+
+
+func RenderTable(headers []string, rows [][]string) string {
+	if len(rows) == 0 {
+		return ""
+	}
+	ncols := len(headers)
+	if ncols == 0 && len(rows) > 0 {
+		ncols = len(rows[0])
+	}
+	if ncols == 0 {
+		return ""
+	}
+
+	colWidths := make([]int, ncols)
+	for i, h := range headers {
+		colWidths[i] = len(h)
+	}
+	for _, row := range rows {
+		for i, cell := range row {
+			if i < ncols && len(cell) > colWidths[i] {
+				colWidths[i] = len(cell)
+			}
+		}
+	}
+	for i := range colWidths {
+		if colWidths[i] < 3 {
+			colWidths[i] = 3
+		}
+		colWidths[i] += 2
+	}
+
+	var lines []string
+	hCells := make([]string, ncols)
+	for i, h := range headers {
+		w := colWidths[i]
+		hCells[i] = StylePrimary.Bold(true).Render(fmt.Sprintf("%-*s", w, " "+h+" "))
+	}
+	lines = append(lines, "  "+strings.Join(hCells, ""))
+
+	for _, row := range rows {
+		cells := make([]string, ncols)
+		for i, cell := range row {
+			if i >= ncols {
+				break
+			}
+			w := colWidths[i]
+			cells[i] = fmt.Sprintf("%-*s", w, " "+cell+" ")
+		}
+		lines = append(lines, "  "+strings.Join(cells, ""))
+	}
+	return strings.Join(lines, "\n")
+}
+
