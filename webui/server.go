@@ -476,11 +476,15 @@ type WorkerInfo struct {
 }
 
 func isValidWorkerFilename(name string) bool {
-	if name == "" || strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+	if name == "" || strings.HasPrefix(name, ".") || strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
 		return false
 	}
-	// Permite apenas formatos suportados pelo Sonic para evitar escrita de arquivos arbitrários
-	return strings.HasSuffix(name, ".js") || strings.HasSuffix(name, ".py") || strings.HasSuffix(name, ".rb") || strings.HasSuffix(name, ".sh") || strings.HasSuffix(name, ".wasm")
+	ext := strings.ToLower(filepath.Ext(name))
+	supported := map[string]bool{
+		".js": true, ".py": true, ".rb": true, ".sh": true,
+		".wasm": true, ".rs": true, ".go": true, ".c": true, ".pl": true,
+	}
+	return supported[ext] || ext == ""
 }
 
 func getWorkerLanguage(name string) string {
@@ -494,8 +498,16 @@ func getWorkerLanguage(name string) string {
 		return "Ruby"
 	case ".sh":
 		return "Shell Script"
+	case ".pl":
+		return "Perl"
 	case ".wasm":
 		return "WebAssembly"
+	case ".go":
+		return "Go (WASM)"
+	case ".rs":
+		return "Rust (WASM)"
+	case ".c":
+		return "C (WASM)"
 	default:
 		return "Native Binary"
 	}
@@ -506,7 +518,7 @@ func getWorkerProtocol(name string) string {
 	switch ext {
 	case ".js":
 		return "HTTP / HTTPS"
-	case ".wasm":
+	case ".wasm", ".go", ".rs", ".c":
 		return "HTTP / HTTPS / WASM"
 	default:
 		return "Multi-Protocol (TCP/UDP/HTTP)"

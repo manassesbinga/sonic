@@ -25,11 +25,11 @@
         <div id="worker-form-container" style="display: none; background-color: var(--surface-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 5px; margin-bottom: 1.5rem;">
             <h4 id="worker-form-title" style="margin-bottom: 1rem; font-family: 'Outfit';">Criar Novo Edge Worker</h4>
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Nome do Arquivo (deve terminar com .js)</label>
-                <input type="text" id="worker-filename" class="search-input" style="width: 100%;" placeholder="ex: meu_worker.js">
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Nome do Arquivo (ex: .js, .wasm, .go, .rs, .py, .sh, .rb, .pl)</label>
+                <input type="text" id="worker-filename" class="search-input" style="width: 100%;" placeholder="ex: meu_worker.js, auth.wasm, script.py, build.sh">
             </div>
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Código JavaScript do Worker</label>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Código / Fonte do Worker</label>
                 <textarea id="worker-code" class="search-input" style="width: 100%; height: 320px; font-family: monospace; font-size: 0.85rem; padding: 0.5rem; white-space: pre; overflow-wrap: normal; overflow-x: auto; line-height: 1.4;" placeholder="// functions/meu_worker.js&#10;function onTraffic(request) {&#10;    log('Meu worker rodando!');&#10;    request.headers.set('X-Meu-Header', 'Sonic');&#10;    return request;&#10;}&#10;&#10;function onResponse(response) {&#10;    return response;&#10;}"></textarea>
             </div>
             <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
@@ -95,8 +95,8 @@
                 // Determinar badge para a linguagem
                 let langBadgeClass = "warning";
                 if (w.language === "JavaScript") langBadgeClass = "primary";
-                else if (w.language === "WebAssembly") langBadgeClass = "success";
-                else if (w.language === "Python" || w.language === "Ruby" || w.language === "Shell Script") langBadgeClass = "info";
+                else if (w.language === "WebAssembly" || w.language === "Go (WASM)" || w.language === "Rust (WASM)" || w.language === "C (WASM)") langBadgeClass = "success";
+                else if (w.language === "Python" || w.language === "Ruby" || w.language === "Shell Script" || w.language === "Perl") langBadgeClass = "info";
 
                 return `
                     <tr>
