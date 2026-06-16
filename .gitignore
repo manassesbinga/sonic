@@ -14,6 +14,10 @@ certs/
 # Runtime logs
 *.log
 sonic_run.log
+logs/
+
+# Build data
+data/
 
 # Build artifacts
 dist/
@@ -34,3 +38,11 @@ sonic.yaml
 # OS
 .DS_Store
 Thumbs.db
+
+# Test certificates
+certs_test/
+
+# Local environments
+.env
+.env.*
+!.env.example

@@ -17,7 +17,7 @@ function onTraffic(request) {
   }
 
   // 3. Adicionar metadados do cliente
-  request.headers.set("X-Sonic-Version", "1.0.0");
+  request.headers.set("X-Sonic-Version", "1.1.0");
   request.headers.set("X-Request-Time", Date.now().toString());
 
   return request;

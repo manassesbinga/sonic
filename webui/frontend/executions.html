@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Admin Web UI - Executions Log</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary)"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Real-time Function Executions
+            </h3>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Worker</th>
+                        <th>Function</th>
+                        <th>Request Method/URL</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="executions-table-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">Nenhuma função executada até ao momento. Aguardando tráfego...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Script no final do body para injeção de layout -->
+    <script src="shared.js"></script>
+    <script>
+        const expandedRows = new Set();
+
+        window.onPageInit = function() {
+            loadExecutions();
+        };
+
+        window.onPagePoll = function() {
+            loadExecutions();
+        };
+
+        async function loadExecutions() {
+            const data = await window.fetchData('/api/executions');
+            updateExecutionsTable(data);
+        }
+
+        function toggleRowDetails(id) {
+            const row = document.getElementById(`details-${id}`);
+            if (row) {
+                if (row.style.display === 'none') {
+                    row.style.display = 'table-row';
+                    expandedRows.add(id);
+                } else {
+                    row.style.display = 'none';
+                    expandedRows.delete(id);
+                }
+            }
+        }
+
+        function updateExecutionsTable(execs) {
+            const tbody = document.getElementById('executions-table-body');
+            if (!tbody) return;
+
+            if (!execs || execs.length === 0) {
+                const emptyHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">Nenhuma função executada até ao momento. Aguardando tráfego...</td></tr>`;
+                if (tbody.innerHTML !== emptyHTML) tbody.innerHTML = emptyHTML;
+                return;
+            }
+
+            const newHTML = execs.map(e => {
+                const date = new Date(e.timestamp);
+                const timeStr = date.toLocaleTimeString() + '.' + String(date.getMilliseconds()).padStart(3, '0');
+
+                const statusBadge = e.status === 'success' 
+                    ? `<span class="status-badge success">Success</span>`
+                    : `<span class="status-badge error">Error</span>`;
+
+                const errorText = e.errorMsg ? `<div class="error-detail" style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; font-family: monospace;">${window.escapeHTML(e.errorMsg)}</div>` : '';
+
+                const isExpanded = expandedRows.has(e.id);
+                const displayStyle = isExpanded ? 'table-row' : 'none';
+
+                // Formatação JSON segura
+                const reqHeadersStr = e.headers ? JSON.stringify(e.headers, null, 2) : '{}';
+                const respHeadersStr = e.respHeaders ? JSON.stringify(e.respHeaders, null, 2) : '{}';
+
+                const detailsRow = `
+                    <tr id="details-${e.id}" style="display: ${displayStyle}; background-color: #040406;">
+                        <td colspan="6" style="padding: 1.5rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+                            <div class="form-grid-1to1" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; font-size: 0.85rem;">
+                                <!-- Request Context -->
+                                <div>
+                                    <h4 style="font-family: 'Outfit'; color: var(--color-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Request Context</h4>
+                                    <div style="background-color: #000000; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #e2e8f0; line-height: 1.4;">
+<strong style="color: #a1a1aa;">Headers:</strong>
+${window.escapeHTML(reqHeadersStr)}
+
+<strong style="color: #a1a1aa;">Body:</strong>
+${window.escapeHTML(e.body || '(empty body)')}
+                                    </div>
+                                </div>
+                                <!-- Response Context -->
+                                <div>
+                                    <h4 style="font-family: 'Outfit'; color: var(--color-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Response Context (Status: ${e.respStatus || 200})</h4>
+                                    <div style="background-color: #000000; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #e2e8f0; line-height: 1.4;">
+<strong style="color: #a1a1aa;">Headers:</strong>
+${window.escapeHTML(respHeadersStr)}
+
+<strong style="color: #a1a1aa;">Body:</strong>
+${window.escapeHTML(e.respBody || '(empty body)')}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Logs da Execução -->
+                            <div style="margin-top: 1.25rem;">
+                                <h4 style="font-family: 'Outfit'; color: var(--color-warning); margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.25A2.75 2.75 0 0 0 14 12.75v5A2.75 2.75 0 0 0 16.75 20.5H18M6 10h1.25A2.75 2.75 0 0 1 10 12.75v5A2.75 2.75 0 0 1 7.25 20.5H6"/></svg>
+                                    Execution Console Logs
+                                </h4>
+                                <div style="background-color: #000000; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: monospace; font-size: 0.75rem; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem;">
+                                    ${e.logs && e.logs.length > 0 ? e.logs.map(l => {
+                                        const lDate = new Date(l.timestamp);
+                                        const lTime = lDate.toLocaleTimeString() + '.' + String(lDate.getMilliseconds()).padStart(3, '0');
+                                        const lvlClass = l.level.toLowerCase();
+                                        return `
+                                            <div style="display: flex; gap: 0.5rem; align-items: flex-start; line-height: 1.4;">
+                                                <span style="color: #52525b; flex-shrink: 0;">[${lTime}]</span>
+                                                <span class="status-badge ${lvlClass === 'error' ? 'error' : (lvlClass === 'warn' ? 'warning' : 'success')}" style="width: auto; font-weight: bold; flex-shrink: 0; text-transform: uppercase; padding: 0.05rem 0.3rem; font-size: 0.6rem; border-radius: 3px;">${window.escapeHTML(l.level)}</span>
+                                                <span style="color: #e4e4e7; word-break: break-all; white-space: pre-wrap;">${window.escapeHTML(l.message)}</span>
+                                            </div>
+                                        `;
+                                    }).join('') : '<em style="color: var(--text-muted); font-size: 0.8rem; padding: 0.25rem 0;">Nenhum log gravado para esta execução.</em>'}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                return `
+                    <tr onclick="toggleRowDetails('${e.id}')" style="cursor: pointer; transition: background-color 0.2s;">
+                        <td style="color: var(--text-muted); font-size: 0.8rem; font-family: monospace;">${timeStr}</td>
+                        <td style="font-weight: 500; font-family: 'Outfit'; color: #ffffff;">${window.escapeHTML(e.worker)}</td>
+                        <td><span style="color: ${e.function === 'onTraffic' ? 'var(--color-primary)' : '#10b981'}; font-weight: 500; font-family: monospace; font-size: 0.8rem;">${e.function}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="font-family: monospace; font-weight: 600; color: var(--text-muted); font-size: 0.75rem; background-color: #18181b; padding: 0.15rem 0.35rem; border-radius: 4px; border: 1px solid var(--border-color);">${window.escapeHTML(e.method)}</span>
+                                <span style="font-family: monospace; color: var(--text-color); font-size: 0.85rem;">${window.escapeHTML(e.url)}</span>
+                            </div>
+                            ${errorText}
+                        </td>
+                        <td><span class="exec-duration" style="font-family: monospace; font-size: 0.8rem; color: #a1a1aa;">${window.escapeHTML(e.duration)}</span></td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                    ${detailsRow}
+                `;
+            }).join('');
+
+            const currentHTML = tbody.innerHTML;
+            if (currentHTML !== newHTML) {
+                tbody.innerHTML = newHTML;
+            }
+        }
+    </script>
+</body>
+</html>

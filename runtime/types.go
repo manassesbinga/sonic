@@ -63,15 +63,18 @@ type PacketResult struct {
 
 // Request represents an intercepted HTTP request (kept for backward compatibility).
 type Request struct {
-	Method  string            `json:"method"`
-	URL     string            `json:"url"`
-	Path    string            `json:"path"`
-	Headers map[string]string `json:"headers"`
-	Body    string            `json:"body"`
+	ID         string            `json:"id"`
+	Method     string            `json:"method"`
+	URL        string            `json:"url"`
+	Path       string            `json:"path"`
+	Headers    map[string]string `json:"headers"`
+	Body       string            `json:"body"`
+	ClientAddr string            `json:"clientAddr"` // Client address (IP:port)
 }
 
 // Response represents an intercepted HTTP response (kept for backward compatibility).
 type Response struct {
+	ID      string            `json:"id"`
 	Status  int               `json:"status"`
 	Headers map[string]string `json:"headers"`
 	Body    string            `json:"body"`

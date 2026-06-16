@@ -76,6 +76,7 @@ func defaultConfig() Config {
 type Sonic struct {
 	cfg      *config.Config
 	jsEngine *runtime.JSEngine
+	kvStore  *runtime.KVStore
 	proxy    *proxy.TransparentProxy
 	stopped  chan struct{}
 }
@@ -89,23 +90,24 @@ type Sonic struct {
 //	    JSCode: `function onTraffic(r) { return r; }`,
 //	})
 func New(cfg Config) (*Sonic, error) {
+	def := defaultConfig()
 	if cfg.ListenPort == 0 {
-		cfg = defaultConfig()
-	}
-	if cfg.CADir == "" {
-		cfg.CADir = "./certs"
-	}
-	if cfg.TimeoutMS == 0 {
-		cfg.TimeoutMS = 50
-	}
-	if cfg.PoolSize == 0 {
-		cfg.PoolSize = 64
-	}
-	if cfg.Failsafe == "" {
-		cfg.Failsafe = "bypass"
+		cfg.ListenPort = def.ListenPort
 	}
 	if cfg.Mode == "" {
-		cfg.Mode = "intercept"
+		cfg.Mode = def.Mode
+	}
+	if cfg.CADir == "" {
+		cfg.CADir = def.CADir
+	}
+	if cfg.TimeoutMS == 0 {
+		cfg.TimeoutMS = def.TimeoutMS
+	}
+	if cfg.PoolSize == 0 {
+		cfg.PoolSize = def.PoolSize
+	}
+	if cfg.Failsafe == "" {
+		cfg.Failsafe = def.Failsafe
 	}
 
 	fullCfg := &config.Config{}
@@ -116,8 +118,6 @@ func New(cfg Config) (*Sonic, error) {
 	fullCfg.Runtime.Failsafe = cfg.Failsafe
 	fullCfg.TLS.CADir = cfg.CADir
 	fullCfg.TLS.AutoGenerate = true
-	fullCfg.Logging.Level = "info"
-	fullCfg.Logging.Format = "text"
 
 	if err := fullCfg.Validate(); err != nil {
 		return nil, fmt.Errorf("sonic: invalid config: %w", err)
@@ -131,7 +131,12 @@ func New(cfg Config) (*Sonic, error) {
 		`
 	}
 
-	jsEngine, err := runtime.NewJSEngine(jsCode, fullCfg.Runtime.TimeoutMS, fullCfg.Runtime.PoolSize)
+	kvStore, err := runtime.NewKVStore()
+	if err != nil {
+		return nil, fmt.Errorf("sonic: kv store: %w", err)
+	}
+
+	jsEngine, err := runtime.NewJSEngineWithKV(jsCode, fullCfg.Runtime.TimeoutMS, fullCfg.Runtime.PoolSize, kvStore)
 	if err != nil {
 		return nil, fmt.Errorf("sonic: js engine: %w", err)
 	}
@@ -143,9 +148,13 @@ func New(cfg Config) (*Sonic, error) {
 
 	transparentProxy := proxy.NewTransparentProxy(fullCfg, mitmEngine, jsEngine)
 
+	// Conecta o Neural Cache ao JSEngine
+	jsEngine.SetNeuralCache(transparentProxy.NeuralCache())
+
 	return &Sonic{
 		cfg:      fullCfg,
 		jsEngine: jsEngine,
+		kvStore:  kvStore,
 		proxy:    transparentProxy,
 		stopped:  make(chan struct{}),
 	}, nil
@@ -168,7 +177,10 @@ func LoadConfig(configPath string) (*Sonic, error) {
 		var sb strings.Builder
 		for _, f := range files {
 			if !f.IsDir() && strings.HasSuffix(f.Name(), ".js") {
-				data, _ := os.ReadFile(filepath.Join("./functions", f.Name()))
+				data, err := os.ReadFile(filepath.Join("./functions", f.Name()))
+				if err != nil {
+					return nil, fmt.Errorf("sonic: failed to read function %s: %w", f.Name(), err)
+				}
 				sb.Write(data)
 				sb.WriteString("\n")
 			}
@@ -182,7 +194,12 @@ func LoadConfig(configPath string) (*Sonic, error) {
 		`
 	}
 
-	jsEngine, err := runtime.NewJSEngine(jsCode, cfg.Runtime.TimeoutMS, cfg.Runtime.PoolSize)
+	kvStore, err := runtime.NewKVStore()
+	if err != nil {
+		return nil, fmt.Errorf("sonic: kv store: %w", err)
+	}
+
+	jsEngine, err := runtime.NewJSEngineWithKV(jsCode, cfg.Runtime.TimeoutMS, cfg.Runtime.PoolSize, kvStore)
 	if err != nil {
 		return nil, fmt.Errorf("sonic: js engine: %w", err)
 	}
@@ -194,9 +211,13 @@ func LoadConfig(configPath string) (*Sonic, error) {
 
 	transparentProxy := proxy.NewTransparentProxy(cfg, mitmEngine, jsEngine)
 
+	// Conecta o Neural Cache ao JSEngine
+	jsEngine.SetNeuralCache(transparentProxy.NeuralCache())
+
 	return &Sonic{
 		cfg:      cfg,
 		jsEngine: jsEngine,
+		kvStore:  kvStore,
 		proxy:    transparentProxy,
 		stopped:  make(chan struct{}),
 	}, nil
@@ -219,7 +240,7 @@ func (s *Sonic) StartBackground() error {
 	return s.proxy.Start()
 }
 
-// Stop gracefully shuts down the proxy engine and waits for connections to drain.
+// Stop gracefully shuts down the proxy engine, KV store, and JS engine.
 func (s *Sonic) Stop() {
 	select {
 	case <-s.stopped:
@@ -227,6 +248,12 @@ func (s *Sonic) Stop() {
 		close(s.stopped)
 	}
 	s.proxy.Stop()
+	if s.kvStore != nil {
+		_ = s.kvStore.Close()
+	}
+	if s.jsEngine != nil {
+		_ = s.jsEngine.Close()
+	}
 }
 
 // WaitForSignal blocks until SIGINT or SIGTERM, then stops the engine.

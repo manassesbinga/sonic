@@ -3,7 +3,6 @@ package telemetry
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -23,7 +22,6 @@ type Telemetry struct {
 	TracerProvider *sdktrace.TracerProvider
 	MeterProvider  *metric.MeterProvider
 	Tracer         trace.Tracer
-	Logger         *Logger
 	MetricsServer  *http.Server
 	config         TelemetryConfig
 }
@@ -36,8 +34,6 @@ type TelemetryConfig struct {
 	MetricsPort     int
 	ServiceName     string
 	ServiceVersion  string
-	LogFormat       string
-	LogLevel        string
 }
 
 func DefaultTelemetryConfig() TelemetryConfig {
@@ -49,15 +45,12 @@ func DefaultTelemetryConfig() TelemetryConfig {
 		MetricsPort:    9090,
 		ServiceName:    "sonic",
 		ServiceVersion: "0.1.0",
-		LogFormat:      "text",
-		LogLevel:       "info",
 	}
 }
 
 func NewTelemetry(cfg TelemetryConfig) (*Telemetry, error) {
 	t := &Telemetry{
 		config: cfg,
-		Logger: NewLogger(cfg.LogFormat, cfg.LogLevel),
 	}
 
 	res := resource.NewWithAttributes(
@@ -89,6 +82,20 @@ func NewTelemetry(cfg TelemetryConfig) (*Telemetry, error) {
 		otel.SetTracerProvider(tp)
 	}
 
+	mux := http.NewServeMux()
+
+	// Health check endpoints (always available when telemetry is initialized)
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok","service":"sonic"}`))
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ready","service":"sonic"}`))
+	})
+
 	if cfg.MetricsEnabled {
 		promExporter, err := otelprom.New()
 		if err != nil {
@@ -102,23 +109,18 @@ func NewTelemetry(cfg TelemetryConfig) (*Telemetry, error) {
 		t.MeterProvider = mp
 		otel.SetMeterProvider(mp)
 
-		mux := http.NewServeMux()
 		mux.Handle(cfg.MetricsPath, promhttp.Handler())
-		t.MetricsServer = &http.Server{
-			Addr:    fmt.Sprintf(":%d", cfg.MetricsPort),
-			Handler: mux,
-		}
-
-		go func() {
-			t.Logger.Info("metrics server started", map[string]any{
-				"port": cfg.MetricsPort,
-				"path": cfg.MetricsPath,
-			})
-			if err := t.MetricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Printf("[TELEMETRY] metrics server error: %v", err)
-			}
-		}()
 	}
+
+	t.MetricsServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.MetricsPort),
+		Handler: mux,
+	}
+
+	go func() {
+		if err := t.MetricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		}
+	}()
 
 	return t, nil
 }

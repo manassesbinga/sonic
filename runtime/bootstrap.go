@@ -111,12 +111,7 @@ class Headers {
     var obj = {};
     var self = this;
     this._map.forEach(function(values, key) {
-      var originalName = self._names[key] || key;
-      var valStr = values.join(', ');
-      obj[originalName] = valStr;
-      if (originalName !== key) {
-        obj[key] = valStr;
-      }
+      obj[key] = values.join(', ');
     });
     return obj;
   }
@@ -129,12 +124,23 @@ class Request {
       this.url = input.url;
       this.method = input.method;
       this.headers = new Headers(input.headers);
-      this.body = input.body;
+      this._bodyStr = input._bodyStr || '';
     } else {
       this.url = input || '';
       this.method = options.method || 'GET';
       this.headers = new Headers(options.headers);
-      this.body = options.body || '';
+      this._bodyStr = options.body || '';
+    }
+    this.body = this._bodyStr;
+  }
+  text() {
+    return Promise.resolve(this._bodyStr);
+  }
+  json() {
+    try {
+      return Promise.resolve(JSON.parse(this._bodyStr));
+    } catch (e) {
+      return Promise.reject(new Error("Falha ao fazer parse de JSON: " + e.message));
     }
   }
 }
@@ -142,22 +148,34 @@ class Request {
 class Response {
   constructor(body, options) {
     options = options || {};
-    this.body = (body === undefined || body === null) ? '' : String(body);
+    this._bodyStr = (body === undefined || body === null) ? '' : String(body);
+    this.body = this._bodyStr;
     this.status = options.status || 200;
     this.headers = new Headers(options.headers);
   }
+  text() {
+    return Promise.resolve(this._bodyStr);
+  }
+  json() {
+    try {
+      return Promise.resolve(JSON.parse(this._bodyStr));
+    } catch (e) {
+      return Promise.reject(new Error("Falha ao fazer parse de JSON: " + e.message));
+    }
+  }
 }
 
-// Ponte fetch baseada em Go _goFetch nativo (se disponível)
+// Ponte fetch baseada em Go _goFetch nativo (se disponível) - retorna Promise síncrona
 function fetch(input, options) {
   options = options || {};
   var req = new Request(input, options);
   var headersObj = req.headers.toJSON();
   var resData = _goFetch(req.method, req.url, JSON.stringify(headersObj), req.body);
-  return new Response(resData.body, {
+  var res = new Response(resData.body, {
     status: resData.status,
     headers: resData.headers
   });
+  return Promise.resolve(res);
 }
 
 // _wrapOnTraffic: Wrapper que converte o rawReq bruto (struct Go) num Request
@@ -175,6 +193,8 @@ function _wrapOnTraffic(rawReq) {
   });
   // Preserva o path do request original
   req.path = rawReq.path;
+  // Preserva o endereço do cliente
+  req.clientAddr = rawReq.clientAddr;
 
   var result = onTraffic(req);
 

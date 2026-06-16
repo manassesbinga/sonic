@@ -21,16 +21,11 @@ clean:
 	rm -rf dist/
 
 run: build
-	./$(BINARY) start
+	./$(BINARY)
 
 dev: build
-	./$(BINARY) dev
+	./$(BINARY) -dev
 
-init:
-	./$(BINARY) init
-
-ca-install:
-	./$(BINARY) ca install
 
 docker:
 	docker compose build
@@ -67,7 +62,6 @@ help:
 	@echo "  make test        Run all tests"
 	@echo "  make run         Start sonic in production mode"
 	@echo "  make dev         Start sonic in development mode (hot-reload)"
-	@echo "  make init        Initialize a new sonic project"
 	@echo "  make install     Install sonic to /usr/local/bin"
 	@echo "  make release     Build cross-platform release binaries"
 	@echo "  make docker      Build Docker image"

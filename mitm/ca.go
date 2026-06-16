@@ -13,11 +13,13 @@ package mitm
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -82,18 +84,19 @@ func loadCA(certPath, keyPath string) (*CA, error) {
 	var privKey *rsa.PrivateKey
 	if keyBlock.Type == "RSA PRIVATE KEY" {
 		privKey, err = x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
-	} else {
-		parsedKey, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
-		if err == nil {
-			var ok bool
-			privKey, ok = parsedKey.(*rsa.PrivateKey)
-			if !ok {
-				err = fmt.Errorf("chave privada nao e RSA")
-			}
+		if err != nil {
+			return nil, fmt.Errorf("erro ao decodificar chave privada CA: %w", err)
 		}
-	}
-	if err != nil {
-		return nil, fmt.Errorf("erro ao decodificar chave privada CA: %w", err)
+	} else {
+		parsedKey, parseErr := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
+		if parseErr != nil {
+			return nil, fmt.Errorf("erro ao decodificar chave privada PKCS#8: %w", parseErr)
+		}
+		var ok bool
+		privKey, ok = parsedKey.(*rsa.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("chave privada nao e RSA")
+		}
 	}
 
 	return &CA{
@@ -103,7 +106,7 @@ func loadCA(certPath, keyPath string) (*CA, error) {
 }
 
 func generateAndSaveCA(caDir, certPath, keyPath string) (*CA, error) {
-	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao gerar chave RSA da CA: %w", err)
 	}
@@ -168,4 +171,51 @@ func generateAndSaveCA(caDir, certPath, keyPath string) (*CA, error) {
 		Cert:    cert,
 		PrivKey: privKey,
 	}, nil
+}
+
+// GenerateServerCert gera um certificado TLS servidor assinado pela CA raiz
+// para o hostname especificado. Útil para habilitar HTTPS em serviços internos
+// como a WebUI administrativa.
+func (ca *CA) GenerateServerCert(host string) (*tls.Certificate, error) {
+	leafKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao gerar chave do certificado servidor: %w", err)
+	}
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao gerar serial number: %w", err)
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"ChannelWorkers Internal"},
+			CommonName:   host,
+		},
+		NotBefore:             time.Now().Add(-24 * time.Hour),
+		NotAfter:              time.Now().AddDate(2, 0, 0),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		template.IPAddresses = []net.IP{ip}
+	} else {
+		template.DNSNames = []string{host}
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, ca.Cert, &leafKey.PublicKey, ca.PrivKey)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao assinar certificado servidor: %w", err)
+	}
+
+	tlsCert := &tls.Certificate{
+		Certificate: [][]byte{certBytes, ca.Cert.Raw},
+		PrivateKey:  leafKey,
+	}
+
+	return tlsCert, nil
 }

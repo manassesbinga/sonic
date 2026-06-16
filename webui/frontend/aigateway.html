@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Admin Web UI - AI Gateway</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+        
+        <!-- Estatísticas de IA -->
+        <div class="metrics-grid">
+            <div class="metric-card" style="--accent-color: var(--color-primary)">
+                <div class="metric-title">IA Requests</div>
+                <div id="ai-requests" class="metric-value">0</div>
+            </div>
+            <div class="metric-card" style="--accent-color: var(--color-secondary)">
+                <div class="metric-title">Cache Hits Semânticos</div>
+                <div id="ai-hits" class="metric-value">0</div>
+            </div>
+            <div class="metric-card" style="--accent-color: var(--color-success)">
+                <div class="metric-title">Tokens Economizados</div>
+                <div id="ai-tokens" class="metric-value">0</div>
+            </div>
+            <div class="metric-card" style="--accent-color: var(--color-primary)">
+                <div class="metric-title">Economia Estimada</div>
+                <div id="ai-savings" class="metric-value">$0.00</div>
+            </div>
+        </div>
+
+        <!-- Configuração do AI Gateway -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title" style="color: var(--color-primary)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                    AI Gateway & Cache Semântico - Configurações
+                </h3>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
+                    <input type="checkbox" id="ai-active" checked> Gateway Ativo
+                </label>
+            </div>
+
+            <div class="form-grid-2col">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Modo de Caching Semântico</label>
+                    <select id="ai-mode" class="search-input" style="width: 100%;" onchange="toggleAIKeysFields()">
+                        <option value="offline">Offline (TF-IDF local - Grátis)</option>
+                        <option value="embeddings">Embeddings (Cosseno - OpenAI API)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Limiar de Similaridade (Threshold: 0.0 - 1.0)</label>
+                    <input type="number" id="ai-threshold" class="search-input" style="width: 100%;" min="0" max="1" step="0.01" value="0.75">
+                </div>
+            </div>
+
+            <div class="form-grid-2col">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">OpenAI API Key</label>
+                    <input type="password" id="ai-openai-key" class="search-input" style="width: 100%;" placeholder="sk-...">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Anthropic API Key (Claude)</label>
+                    <input type="password" id="ai-anthropic-key" class="search-input" style="width: 100%;" placeholder="sk-ant-...">
+                </div>
+            </div>
+
+            <div class="form-grid-2col">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Provedor Principal</label>
+                    <select id="ai-provider" class="search-input" style="width: 100%;">
+                        <option value="openai">OpenAI (GPT-4o/mini)</option>
+                        <option value="anthropic">Anthropic (Claude 3.5)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Provedor de Fallback (Resiliência)</label>
+                    <select id="ai-fallback" class="search-input" style="width: 100%;">
+                        <option value="">Nenhum (Retornar erro)</option>
+                        <option value="openai">OpenAI (GPT-4o/mini)</option>
+                        <option value="anthropic">Anthropic (Claude 3.5)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                <button class="filter-btn" style="border-color: var(--color-error); color: var(--color-error);" onclick="clearAICache()">Limpar Cache Semântico</button>
+                <button class="auth-button" style="width: auto; padding: 0.5rem 1.5rem;" onclick="saveAIConfig()">Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script at the end of body -->
+    <script src="shared.js"></script>
+    <script>
+        window.onPageInit = function() {
+            loadAIStats();
+        };
+
+        window.onPagePoll = function() {
+            loadAIStats();
+        };
+
+        async function loadAIConfig() {
+            const cfg = await window.fetchData('/api/ai/config');
+            if (cfg) {
+                document.getElementById('ai-active').checked = cfg.active;
+                document.getElementById('ai-mode').value = cfg.mode;
+                document.getElementById('ai-threshold').value = cfg.threshold;
+                document.getElementById('ai-openai-key').value = cfg.openAIKey || '';
+                document.getElementById('ai-anthropic-key').value = cfg.anthropicKey || '';
+                document.getElementById('ai-provider').value = cfg.defaultProvider;
+                document.getElementById('ai-fallback').value = cfg.fallbackProvider || '';
+                toggleAIKeysFields();
+            }
+        }
+
+        function toggleAIKeysFields() {
+            const mode = document.getElementById('ai-mode').value;
+            const keyField = document.getElementById('ai-openai-key');
+            if (mode === 'embeddings') {
+                keyField.style.borderColor = 'var(--color-primary)';
+            } else {
+                keyField.style.borderColor = 'var(--border-color)';
+            }
+        }
+
+        async function saveAIConfig() {
+            const active = document.getElementById('ai-active').checked;
+            const mode = document.getElementById('ai-mode').value;
+            const threshold = parseFloat(document.getElementById('ai-threshold').value);
+            const openAIKey = document.getElementById('ai-openai-key').value;
+            const anthropicKey = document.getElementById('ai-anthropic-key').value;
+            const defaultProvider = document.getElementById('ai-provider').value;
+            const fallbackProvider = document.getElementById('ai-fallback').value;
+
+            const res = await fetch('/api/ai/config', {
+                method: 'POST',
+                headers: window.getHeaders(),
+                body: JSON.stringify({
+                    active,
+                    mode,
+                    threshold,
+                    openAIKey,
+                    anthropicKey,
+                    defaultProvider,
+                    fallbackProvider
+                })
+            });
+
+            if (res.ok) {
+                alert("Configurações do AI Gateway guardadas.");
+                loadAIConfig();
+            } else {
+                alert("Erro ao guardar configurações.");
+            }
+        }
+
+        async function loadAIStats() {
+            const stats = await window.fetchData('/api/ai/stats');
+            if (stats) {
+                document.getElementById('ai-requests').innerText = formatValue(stats.totalRequests);
+                document.getElementById('ai-hits').innerText = formatValue(stats.cacheHits);
+                document.getElementById('ai-tokens').innerText = formatValue(stats.tokensSaved);
+                document.getElementById('ai-savings').innerText = '$' + stats.costSavedUSD.toFixed(3);
+            }
+            loadAIConfig();
+        }
+
+        async function clearAICache() {
+            if (confirm("Deseja realmente apagar todas as respostas de IA guardadas no cache semântico?")) {
+                const res = await fetch('/api/ai/clear-cache', {
+                    method: 'POST',
+                    headers: window.getHeaders()
+                });
+                if (res.ok) {
+                    alert("Cache semântico limpo.");
+                    loadAIStats();
+                }
+            }
+        }
+
+        function formatValue(val) {
+            if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+            if (val >= 1000) return (val / 1000).toFixed(1) + 'k';
+            return val;
+        }
+    </script>
+</body>
+</html>

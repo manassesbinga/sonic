@@ -27,7 +27,7 @@ func ExtractSNI(data []byte) (string, error) {
 	}
 
 	recordLen := int(data[3])<<8 | int(data[4])
-	if len(data) < recordLen+5 {
+	if recordLen < 0 || len(data) < recordLen+5 {
 		return "", errors.New("record TLS Handshake incompleto")
 	}
 
@@ -70,7 +70,7 @@ func ExtractSNI(data []byte) (string, error) {
 	pos += 2
 
 	extensionsEnd := pos + extensionsLen
-	if extensionsEnd > len(data) {
+	if extensionsLen < 0 || extensionsEnd < pos || extensionsEnd > len(data) {
 		extensionsEnd = len(data)
 	}
 

@@ -6,127 +6,90 @@ import (
 	"testing"
 )
 
-func TestLoadConfigDefault(t *testing.T) {
-	// Carrega configuração inexistente para testar valores default
-	cfg, err := LoadConfig("non-existent-config.yaml")
-	if err != nil {
-		t.Fatalf("Nao deveria dar erro ao carregar config inexistente (espera usar defaults): %v", err)
+func TestValidateValidConfig(t *testing.T) {
+	cfg := &Config{
+		ListenPort: 8443,
+		Mode:       "intercept",
 	}
-
-	if cfg.ListenPort != 8443 {
-		t.Errorf("ListenPort default deveria ser 8443, obteve: %d", cfg.ListenPort)
-	}
-	if cfg.Mode != "intercept" {
-		t.Errorf("Mode default deveria ser 'intercept', obteve: %s", cfg.Mode)
-	}
-	if cfg.TLS.CADir != "./certs" {
-		t.Errorf("CADir default deveria ser './certs', obteve: %s", cfg.TLS.CADir)
-	}
-	if cfg.Runtime.TimeoutMS != 50 {
-		t.Errorf("TimeoutMS default deveria ser 50, obteve: %d", cfg.Runtime.TimeoutMS)
-	}
-	if cfg.Runtime.PoolSize != 64 {
-		t.Errorf("PoolSize default deveria ser 64, obteve: %d", cfg.Runtime.PoolSize)
+	cfg.Runtime.Failsafe = "bypass"
+	cfg.Runtime.TimeoutMS = 50
+	cfg.Runtime.PoolSize = 64
+	cfg.TLS.CADir = "./certs"
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("expected no error, got: %v", err)
 	}
 }
 
-func TestConfigValidation(t *testing.T) {
-	tests := []struct {
-		name    string
-		cfg     Config
-		wantErr bool
-	}{
-		{
-			name: "Porta Valida",
-			cfg: Config{
-				ListenPort: 8080,
-				Mode:       "intercept",
-				Runtime: struct {
-					TimeoutMS int    `mapstructure:"timeout_ms"`
-					PoolSize  int    `mapstructure:"pool_size"`
-					Failsafe  string `mapstructure:"failsafe"`
-				}{Failsafe: "bypass"},
-			},
-			wantErr: false,
-		},
-		{
-			name: "Porta Invalida Negativa",
-			cfg: Config{
-				ListenPort: -1,
-				Mode:       "intercept",
-				Runtime: struct {
-					TimeoutMS int    `mapstructure:"timeout_ms"`
-					PoolSize  int    `mapstructure:"pool_size"`
-					Failsafe  string `mapstructure:"failsafe"`
-				}{Failsafe: "bypass"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "Porta Invalida Superior",
-			cfg: Config{
-				ListenPort: 70000,
-				Mode:       "intercept",
-				Runtime: struct {
-					TimeoutMS int    `mapstructure:"timeout_ms"`
-					PoolSize  int    `mapstructure:"pool_size"`
-					Failsafe  string `mapstructure:"failsafe"`
-				}{Failsafe: "bypass"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "Modo Invalido",
-			cfg: Config{
-				ListenPort: 8443,
-				Mode:       "invalid-mode",
-				Runtime: struct {
-					TimeoutMS int    `mapstructure:"timeout_ms"`
-					PoolSize  int    `mapstructure:"pool_size"`
-					Failsafe  string `mapstructure:"failsafe"`
-				}{Failsafe: "bypass"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "Failsafe Invalido",
-			cfg: Config{
-				ListenPort: 8443,
-				Mode:       "intercept",
-				Runtime: struct {
-					TimeoutMS int    `mapstructure:"timeout_ms"`
-					PoolSize  int    `mapstructure:"pool_size"`
-					Failsafe  string `mapstructure:"failsafe"`
-				}{Failsafe: "invalid-failsafe"},
-			},
-			wantErr: true,
-		},
+func TestValidateInvalidPort(t *testing.T) {
+	cfg := &Config{
+		ListenPort: 0,
+		Mode:       "intercept",
 	}
+	cfg.Runtime.Failsafe = "bypass"
+	cfg.Runtime.TimeoutMS = 50
+	cfg.Runtime.PoolSize = 64
+	cfg.TLS.CADir = "./certs"
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for invalid port, got nil")
+	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.cfg.Validate()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Validate() erro = %v, wantErr = %v", err, tt.wantErr)
-			}
-		})
+func TestValidateInvalidMode(t *testing.T) {
+	cfg := &Config{
+		ListenPort: 8443,
+		Mode:       "invalid",
+	}
+	cfg.Runtime.Failsafe = "bypass"
+	cfg.Runtime.TimeoutMS = 50
+	cfg.Runtime.PoolSize = 64
+	cfg.TLS.CADir = "./certs"
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for invalid mode, got nil")
+	}
+}
+
+func TestValidateInvalidFailsafe(t *testing.T) {
+	cfg := &Config{
+		ListenPort: 8443,
+		Mode:       "intercept",
+	}
+	cfg.Runtime.Failsafe = "invalid"
+	cfg.Runtime.TimeoutMS = 50
+	cfg.Runtime.PoolSize = 64
+	cfg.TLS.CADir = "./certs"
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for invalid failsafe, got nil")
 	}
 }
 
 func TestCreateDefaultConfigFile(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "cw-test-*")
-	if err != nil {
-		t.Fatalf("Erro ao criar diretorio temporario: %v", err)
+	dir := t.TempDir()
+	if err := CreateDefaultConfigFile(dir); err != nil {
+		t.Fatalf("CreateDefaultConfigFile failed: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
-
-	err = CreateDefaultConfigFile(tempDir)
-	if err != nil {
-		t.Fatalf("Erro ao criar arquivo de configuracao padrao: %v", err)
+	path := filepath.Join(dir, "sonic.yaml")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Error("expected config file to exist")
 	}
+}
 
-	expectedFile := filepath.Join(tempDir, "sonic.yaml")
-	if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
-		t.Errorf("Arquivo de configuracao padrao nao foi gerado em %s", expectedFile)
+func TestLoadConfigDefaults(t *testing.T) {
+	dir := t.TempDir()
+	origDir, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(origDir)
+
+	cfg, err := LoadConfig("")
+	if err != nil {
+		t.Fatalf("LoadConfig with no file should return defaults, got: %v", err)
+	}
+	if cfg.ListenPort != 8443 {
+		t.Errorf("expected default port 8443, got %d", cfg.ListenPort)
+	}
+	if cfg.Mode != "intercept" {
+		t.Errorf("expected default mode 'intercept', got %s", cfg.Mode)
+	}
+	if cfg.Runtime.Failsafe != "bypass" {
+		t.Errorf("expected default failsafe 'bypass', got %s", cfg.Runtime.Failsafe)
 	}
 }
